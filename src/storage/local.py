@@ -4,7 +4,7 @@ class LocalStorage:
     """
     Handles reading and writing the encrypted vault from the local filesystem
     """
-    def __init__(self, vault_path:str = "src/vault/encrypted-vault.json"):
+    def __init__(self, vault_path:str = "vault/encrypted-vault.json"):
         self.vault_path = Path(vault_path)
 
         # create the dir if it doesn't exist

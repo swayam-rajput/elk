@@ -1,3 +1,5 @@
+from cryptography.exceptions import InvalidTag
+
 from models.vault import Vault
 from models.enc_vault import (
     EncryptedVault,
@@ -24,9 +26,9 @@ class VaultService:
 
         nonce = RandomGenerator.generate_nonce()
 
-        key = Argon2KeyDeriver.derive_key(
-            master_password,
-            salt
+        key = Argon2KeyDeriver().derive_key(
+            master_password=master_password,
+            salt=salt
         )
 
         plaintext = VaultSerializer.serialize(vault)
@@ -70,16 +72,19 @@ class VaultService:
             encrypted_vault.ciphertext
         )
 
-        key = Argon2KeyDeriver.derive_key(
-            master_password,
-            salt,
+        key = Argon2KeyDeriver().derive_key(
+            master_password=master_password,
+            salt=salt,
         )
+        try:
 
-        plaintext = AESManager.decrypt(
-            ciphertext,
-            key,
-            nonce,
-        )
+            plaintext = AESManager.decrypt(
+                ciphertext,
+                key,
+                nonce,
+            )
+        except InvalidTag:
+            raise ValueError("Invalid Master Password")
 
         return VaultSerializer.deserialize(
             plaintext
