@@ -1,8 +1,11 @@
 import json
 from dataclasses import asdict
+from datetime import datetime
 
+from models.email import Email
+from models.entry import Entry, Site
+from models.settings import Settings
 from models.vault import Vault
-
 
 class VaultSerializer:
     """
@@ -31,7 +34,45 @@ class VaultSerializer:
         """
         Convert UTF-8 encoded JSON bytes back into a dictionary.
 
-        (We'll reconstruct a Vault object in a later step.)
         """
+        vault_dict = json.loads(
+            data.decode('utf-8')
+        )
 
-        return json.loads(data.decode("utf-8"))
+        emails = [
+            Email(**email) for email in vault_dict['emails']
+        ]
+
+        entries = []
+
+        for entry in vault_dict['entries']:
+            site = Site(**entry['site'])
+
+            entries.append(
+                Entry(
+                    id=entry['id'],
+                    site=site,
+                    email_id=entry['email_id'],
+                    username=entry['username'],
+                    password=entry['password'],
+                    notes=entry['notes'],
+                    favorite=entry['favorite'],
+                    created_at=datetime.fromisoformat(
+                        entry['created_at']
+                    ),
+                    updated_at=datetime.fromisoformat(
+                        entry['updated_at']
+                    ),
+                )
+            )
+        
+        settings = Settings(
+            **vault_dict['settings']
+        )
+
+        return Vault(
+            version=vault_dict['version'],
+            emails=emails,
+            entries=entries,
+            settings=settings,
+        )
