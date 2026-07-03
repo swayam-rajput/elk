@@ -1,0 +1,61 @@
+Screen {
+    layout: vertical;
+    background: transparent;
+}
+
+Horizontal {
+    height: 1fr;
+}
+
+EntryItem{
+    height: 1fr;
+}
+
+Header {
+    background: transparent;
+    color: white;
+    text-style: bold;
+}
+
+Footer {
+    background: transparent;
+    color: white;
+}
+
+#left-pane {
+    width: 35%;
+    border: solid white;
+    padding: 1;
+    background: transparent;
+}
+
+#right-pane {
+    width: 65%;
+    border: solid white;
+    padding: 1;
+    background: transparent;
+}
+
+Screen {
+    layout: vertical;
+}
+
+Horizontal {
+    height: 1fr;
+}
+
+#entry-list {
+    width: 35%;
+    border: solid white;
+    padding: 1 0;
+}
+
+#entry-details {
+    width: 65%;
+    border: solid white;
+    padding: 1 2;
+}
+
+ListView {
+    scrollbar-size: 0 0;
+}
