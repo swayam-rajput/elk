@@ -45,7 +45,8 @@ class VaultService:
 
         self._salt = RandomGenerator.generate_salt()
 
-        self._key = Argon2KeyDeriver.derive_key(
+        deriver = Argon2KeyDeriver()
+        self._key = deriver.derive_key(
             master_password,
             self._salt,
         )
@@ -64,9 +65,9 @@ class VaultService:
             version=1,
             kdf=KDFMetadata(
                 algorithm="argon2id",
-                memory=Argon2KeyDeriver.MEMORY_COST,
-                iterations=Argon2KeyDeriver.TIME_COST,
-                parallelism=Argon2KeyDeriver.PARALLELISM,
+                memory=deriver.config.memory_cost,
+                iterations=deriver.config.time_cost,
+                parallelism=deriver.config.parallelism,
                 salt=Encoding.bytes_to_base64(self._salt),
             ),
             encryption=EncryptionMetadata(
@@ -154,13 +155,14 @@ class VaultService:
             nonce,
         )
 
+        deriver = Argon2KeyDeriver()
         encrypted_vault = EncryptedVault(
             version=1,
             kdf=KDFMetadata(
                 algorithm="argon2id",
-                memory=Argon2KeyDeriver.MEMORY_COST,
-                iterations=Argon2KeyDeriver.TIME_COST,
-                parallelism=Argon2KeyDeriver.PARALLELISM,
+                memory=deriver.config.memory_cost,
+                iterations=deriver.config.time_cost,
+                parallelism=deriver.config.parallelism,
                 salt=Encoding.bytes_to_base64(self._salt),
             ),
             encryption=EncryptionMetadata(
@@ -208,6 +210,17 @@ class VaultService:
 
         self._vault.emails.append(email)
 
+
+    def update_entry(self, entry: Entry):
+        if self._vault is None:
+            raise ValueError("Vault is locked.")
+
+        for i, e in enumerate(self._vault.entries):
+            if e.id == entry.id:
+                self._vault.entries[i] = entry
+                return
+
+        raise ValueError(f"Entry {entry.id} not found.")
 
     def delete_entry(self, entry_id: str):
         if self._vault is None:
