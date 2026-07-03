@@ -5,6 +5,7 @@ from dataclasses import asdict
 from models.enc_vault import EncryptedVault, EncryptionMetadata, KDFMetadata
 from storage.local import LocalStorage
 from vault.service import VaultService
+from ui.app import PasswordManager
 
 def save_encrypted_vault(storage: LocalStorage, vault: EncryptedVault) -> None:
     """
@@ -37,40 +38,38 @@ def main():
     service = VaultService()
 
     if not storage.exists():
-        print('Creating new vault')
-
-        master_pass = input('Create Master Password: ')
-
-        encrypted_vault = service.create_vault(
-            master_password=master_pass,
-            
+        master_password = input(
+            "Create Master Password: "
         )
 
-        save_encrypted_vault(
-            storage,
-            encrypted_vault
+        service.create_vault(
+            master_password
         )
 
-        print('Vault created successfully')
-    
     else:
-        print('Vault found.')
 
         master_password = input(
-            'Master Password: '
+            "Master Password: "
         )
+
         encrypted_vault = load_encrypted_vault(
             storage
         )
+
         try:
-            vault = service.unlock_vault(
-                encrypted_vault,
-                master_password
+
+            service.unlock_vault(
+                master_password,
             )
 
-            print("\nVault decrypted successfully\n")
-            print(vault)
         except ValueError as e:
+
             print(e)
+
+            return
+
+    app = PasswordManager(service)
+
+    app.run()
 if __name__ == "__main__":
     main()
