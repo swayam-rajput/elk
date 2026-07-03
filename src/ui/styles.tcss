@@ -141,32 +141,7 @@ HomeScreen {
 #entry-list-container {
     height: 1fr;
     background: $background;
-    layout: horizontal;
 }
-
-#left-panel {
-    width: 35%;
-    height: 100%;
-    border: round $border;
-    background: $surface;
-}
-
-#left-panel:focus-within {
-    border: round $accent;
-}
-
-#right-panel {
-    width: 65%;
-    height: 100%;
-    border: round $border;
-    background: $surface;
-    padding: 1 2;
-}
-
-#right-panel:focus-within {
-    border: round $accent;
-}
-
 
 /* ─── Entry table / list ─────────────────────────────────── */
 
@@ -271,7 +246,7 @@ DetailsScreen {
 
 .detail-password-hidden {
     color: $text-subtle;
-    
+    letter-spacing: 2;
 }
 
 #details-actions {
