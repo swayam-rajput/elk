@@ -1,31 +1,24 @@
-from textual.containers import Horizontal
-from textual.widgets import Label
+from textual.widgets import Static
 
 from models.entry import Entry
 
 
-class EntryItem(Horizontal):
-    
-    DEFAULT_CSS = """
-    EntryItem {
-        height: auto;
-    }
-    """
+class EntryItem(Static):
 
-    def __init__(self, entry: Entry):
+    def __init__(
+        self,
+        entry: Entry,
+        selected: bool = False,
+    ):
         super().__init__()
 
         self.entry = entry
+        self.selected = selected
 
-    def compose(self):
+    def render(self):
 
-        yield Label(
-            self.entry.site.name,
-            classes="entry-name",
-        )
+        prefix = "> " if self.selected else "  "
 
-        if self.entry.favorite:
-            yield Label(
-                "~ ",
-                classes="favorite",
-            )
+        favorite = " !" if self.entry.favorite else ""
+
+        return f"{prefix}{self.entry.site.name}{favorite}"

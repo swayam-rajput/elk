@@ -9,7 +9,7 @@ class PasswordManager(App):
     CSS_PATH = "style.tcss"
 
     BINDINGS = [
-        Binding("q", "quit", "Quit"),
+        Binding("q", "quit", "Quit", priority=True),
     ]
 
     def __init__(self, service: VaultService):
