@@ -7,5 +7,9 @@ requires-python = ">=3.11"
 dependencies = [
     "argon2-cffi>=25.1.0",
     "cryptography>=49.0.0",
+    "inquirer>=3.4.1",
     "pydantic>=2.13.4",
+    "rich>=15.0.0",
+    "textual>=0.50.0",
+    "pyperclip>=1.8.2",
 ]

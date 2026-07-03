@@ -1,0 +1,652 @@
+/* =========================================================
+   ELK PASSWORD MANAGER — Global Stylesheet
+   Design: dark glass / Obsidian-inspired
+   ========================================================= */
+
+/* ─── Root / Screen defaults ─────────────────────────────── */
+
+Screen {
+    background: $background;
+    color: $text;
+    layout: vertical;
+}
+
+/* ─── Design tokens (Textual CSS variables) ──────────────── */
+
+/* Background layers */
+$background:      #0d0f14;
+$surface:         #13161e;
+$surface-raised:  #1a1e28;
+$surface-overlay: #20253300;
+
+/* Brand */
+$accent:          #7c6af7;
+$accent-dim:      #5a50c4;
+$accent-glow:     #7c6af733;
+
+/* Semantic */
+$danger:          #e05c5c;
+$danger-dim:      #a83c3c;
+$success:         #4caf87;
+$warning:         #e09a4c;
+
+/* Text */
+$text:            #e2e4ec;
+$text-muted:      #757a8a;
+$text-subtle:     #4a5068;
+
+/* Borders */
+$border:          #2a2f3f;
+$border-focus:    $accent;
+
+/* ─── Unlock screen ──────────────────────────────────────── */
+
+UnlockScreen {
+    align: center middle;
+    background: $background;
+}
+
+#unlock-card {
+    width: 52;
+    height: auto;
+    background: $surface;
+    border: tall $border;
+    padding: 2 3;
+    layout: vertical;
+}
+
+#unlock-title {
+    text-align: center;
+    color: $accent;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#unlock-subtitle {
+    text-align: center;
+    color: $text-muted;
+    margin-bottom: 2;
+}
+
+#unlock-password {
+    margin-bottom: 1;
+}
+
+#unlock-error {
+    color: $danger;
+    text-align: center;
+    height: 1;
+    margin-bottom: 1;
+}
+
+#unlock-btn {
+    width: 100%;
+    background: $accent;
+    color: $background;
+    text-style: bold;
+    border: none;
+}
+
+#unlock-btn:hover {
+    background: $accent-dim;
+}
+
+#unlock-btn:focus {
+    background: $accent-dim;
+    border: tall $accent;
+}
+
+/* ─── Home screen ────────────────────────────────────────── */
+
+HomeScreen {
+    layout: vertical;
+    background: $background;
+}
+
+#home-header {
+    height: 3;
+    background: $surface;
+    border-bottom: tall $border;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 2;
+}
+
+#app-title {
+    color: $accent;
+    text-style: bold;
+    width: 1fr;
+}
+
+#vault-status {
+    color: $text-muted;
+    width: auto;
+}
+
+#search-container {
+    height: 3;
+    background: $surface-raised;
+    border-bottom: tall $border;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 2;
+}
+
+#search-icon {
+    color: $text-muted;
+    width: auto;
+    margin-right: 1;
+}
+
+#entry-list-container {
+    height: 1fr;
+    background: $background;
+    layout: horizontal;
+}
+
+#left-panel {
+    width: 35%;
+    height: 100%;
+    border: round $border;
+    background: $surface;
+}
+
+#left-panel:focus-within {
+    border: round $accent;
+}
+
+#right-panel {
+    width: 65%;
+    height: 100%;
+    border: round $border;
+    background: $surface;
+    padding: 1 2;
+}
+
+#right-panel:focus-within {
+    border: round $accent;
+}
+
+
+/* ─── Entry table / list ─────────────────────────────────── */
+
+EntryTable {
+    height: 1fr;
+    background: $background;
+}
+
+.entry-row {
+    height: 1;
+    layout: horizontal;
+    padding: 0 2;
+    color: $text;
+}
+
+.entry-row:hover {
+    background: $surface;
+}
+
+.entry-row.--highlight {
+    background: $accent-glow;
+    color: $text;
+}
+
+.entry-row.--selected {
+    background: $accent-glow;
+    border-left: tall $accent;
+}
+
+.entry-col-star {
+    width: 3;
+    color: $warning;
+}
+
+.entry-col-site {
+    width: 22;
+    color: $text;
+    text-style: bold;
+}
+
+.entry-col-url {
+    width: 26;
+    color: $text-muted;
+}
+
+.entry-col-label {
+    width: 14;
+    color: $accent;
+}
+
+.entry-empty {
+    text-align: center;
+    color: $text-subtle;
+    margin-top: 4;
+}
+
+/* ─── Details screen ─────────────────────────────────────── */
+
+DetailsScreen {
+    layout: vertical;
+    background: $background;
+}
+
+#details-header {
+    height: 3;
+    background: $surface;
+    border-bottom: tall $border;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 2;
+}
+
+#details-site-name {
+    color: $text;
+    text-style: bold;
+    width: 1fr;
+}
+
+#details-body {
+    height: 1fr;
+    layout: vertical;
+    padding: 2 4;
+    overflow-y: auto;
+}
+
+.detail-row {
+    layout: horizontal;
+    height: auto;
+    margin-bottom: 1;
+}
+
+.detail-label {
+    width: 18;
+    color: $text-muted;
+    text-style: bold;
+}
+
+.detail-value {
+    width: 1fr;
+    color: $text;
+}
+
+.detail-password-hidden {
+    color: $text-subtle;
+    
+}
+
+#details-actions {
+    height: 3;
+    background: $surface;
+    border-top: tall $border;
+    layout: horizontal;
+    align: center middle;
+    padding: 0 2;
+}
+
+/* ─── Edit / Add screen ──────────────────────────────────── */
+
+EditEntryScreen {
+    layout: vertical;
+    background: $background;
+}
+
+#edit-header {
+    height: 3;
+    background: $surface;
+    border-bottom: tall $border;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 2;
+}
+
+#edit-title {
+    color: $text;
+    text-style: bold;
+    width: 1fr;
+}
+
+#edit-form {
+    height: 1fr;
+    layout: vertical;
+    padding: 2 4;
+    overflow-y: auto;
+}
+
+.form-field {
+    margin-bottom: 2;
+    layout: vertical;
+}
+
+.form-label {
+    color: $text-muted;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+.form-error {
+    color: $danger;
+    height: 1;
+    margin-top: 0;
+}
+
+#edit-footer {
+    height: 3;
+    background: $surface;
+    border-top: tall $border;
+    layout: horizontal;
+    align: right middle;
+    padding: 0 2;
+}
+
+.btn-primary {
+    background: $accent;
+    color: $background;
+    text-style: bold;
+    border: none;
+    margin-left: 1;
+}
+
+.btn-primary:hover {
+    background: $accent-dim;
+}
+
+.btn-secondary {
+    background: $surface-raised;
+    color: $text;
+    border: tall $border;
+    margin-left: 1;
+}
+
+.btn-secondary:hover {
+    background: $border;
+}
+
+.btn-danger {
+    background: $danger-dim;
+    color: $text;
+    border: none;
+    margin-left: 1;
+}
+
+.btn-danger:hover {
+    background: $danger;
+}
+
+/* ─── Emails screen ──────────────────────────────────────── */
+
+EmailsScreen {
+    layout: vertical;
+    background: $background;
+}
+
+#emails-header {
+    height: 3;
+    background: $surface;
+    border-bottom: tall $border;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 2;
+}
+
+#emails-title {
+    color: $text;
+    text-style: bold;
+    width: 1fr;
+}
+
+#emails-body {
+    height: 1fr;
+    layout: vertical;
+    padding: 2 4;
+    overflow-y: auto;
+}
+
+.email-card {
+    layout: horizontal;
+    height: 3;
+    background: $surface;
+    border: tall $border;
+    padding: 0 2;
+    margin-bottom: 1;
+    align: left middle;
+}
+
+.email-card:focus {
+    border: tall $accent;
+}
+
+.email-card-address {
+    width: 1fr;
+    color: $text;
+    text-style: bold;
+}
+
+.email-card-label {
+    width: 20;
+    color: $accent;
+}
+
+#emails-footer {
+    height: 3;
+    background: $surface;
+    border-top: tall $border;
+    layout: horizontal;
+    align: right middle;
+    padding: 0 2;
+}
+
+/* ─── Settings screen ────────────────────────────────────── */
+
+SettingsScreen {
+    layout: vertical;
+    background: $background;
+}
+
+#settings-header {
+    height: 3;
+    background: $surface;
+    border-bottom: tall $border;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 2;
+}
+
+#settings-title {
+    color: $text;
+    text-style: bold;
+    width: 1fr;
+}
+
+#settings-body {
+    height: 1fr;
+    layout: vertical;
+    padding: 2 4;
+    overflow-y: auto;
+}
+
+.settings-section-title {
+    color: $accent;
+    text-style: bold;
+    margin-bottom: 1;
+    margin-top: 1;
+}
+
+.settings-row {
+    layout: horizontal;
+    height: 3;
+    background: $surface;
+    border: tall $border;
+    padding: 0 2;
+    margin-bottom: 1;
+    align: left middle;
+}
+
+.settings-row-label {
+    width: 1fr;
+    color: $text;
+}
+
+.settings-row-value {
+    width: auto;
+    color: $text-muted;
+}
+
+.settings-placeholder {
+    color: $text-subtle;
+    text-style: italic;
+}
+
+/* ─── Shared widgets ─────────────────────────────────────── */
+
+/* SearchBar */
+SearchBar {
+    width: 1fr;
+    height: 1;
+    background: transparent;
+    border: none;
+    color: $text;
+    padding: 0;
+}
+
+SearchBar:focus {
+    border: none;
+    background: transparent;
+}
+
+/* PasswordField */
+PasswordField {
+    width: 100%;
+}
+
+PasswordField Input {
+    background: $surface-raised;
+    border: tall $border;
+    color: $text;
+    width: 100%;
+}
+
+PasswordField Input:focus {
+    border: tall $accent;
+}
+
+/* ─── Global Footer ──────────────────────────────────────── */
+
+AppFooter {
+    height: 1;
+    background: $surface;
+    color: $text-muted;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 1;
+}
+
+.footer-binding {
+    margin-right: 2;
+    color: $text-subtle;
+}
+
+.footer-key {
+    color: $accent;
+    text-style: bold;
+}
+
+/* ─── Textual Input overrides ────────────────────────────── */
+
+Input {
+    background: $surface-raised;
+    border: tall $border;
+    color: $text;
+}
+
+Input:focus {
+    border: tall $accent;
+}
+
+Input.--invalid {
+    border: tall $danger;
+}
+
+Select {
+    background: $surface-raised;
+    border: tall $border;
+    color: $text;
+}
+
+Select:focus {
+    border: tall $accent;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────── */
+
+ScrollableContainer > .scrollbar {
+    background: $surface;
+    color: $border;
+}
+
+ScrollableContainer > .scrollbar--vertical-bar {
+    color: $accent-dim;
+}
+
+/* ─── DataTable overrides ────────────────────────────────── */
+
+DataTable {
+    background: $background;
+    color: $text;
+    height: 1fr;
+}
+
+DataTable > .datatable--header {
+    background: $surface;
+    color: $text-muted;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: $accent-glow;
+    color: $text;
+}
+
+DataTable > .datatable--hover {
+    background: $surface;
+}
+
+/* ─── Notification / Toast ───────────────────────────────── */
+
+Toast {
+    background: $surface-raised;
+    border: tall $accent;
+    color: $text;
+}
+
+/* ─── Modal dialogs ──────────────────────────────────────── */
+
+ModalScreen {
+    align: center middle;
+    background: $surface-overlay;
+}
+
+#modal-card {
+    width: 56;
+    height: auto;
+    background: $surface;
+    border: tall $accent;
+    padding: 2 3;
+    layout: vertical;
+}
+
+#modal-title {
+    color: $accent;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#modal-message {
+    color: $text;
+    margin-bottom: 2;
+}
+
+#modal-actions {
+    layout: horizontal;
+    align: right middle;
+    height: 3;
+}
