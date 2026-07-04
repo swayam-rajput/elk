@@ -48,9 +48,10 @@ def main():
 
     else:
 
-        master_password = input(
-            "Master Password: "
-        )
+        # master_password = input(
+        #     "Master Password: "
+        # )
+        master_password = 'that'
 
         encrypted_vault = load_encrypted_vault(
             storage

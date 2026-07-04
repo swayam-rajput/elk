@@ -1,61 +1,120 @@
+/* Main Screen layout */
 Screen {
     layout: vertical;
-    background: transparent;
+    background: #262624;
 }
 
-Horizontal {
+/* Horizontal splitter layout */
+#main-layout {
     height: 1fr;
-}
-
-EntryItem{
-    height: auto;
-}
-
-Header {
     background: transparent;
-    color: white;
+}
+
+/* ScrollableList on the left */
+ScrollableList {
+    width: 20%;
+    scrollbar-size: 0 0;
+    padding: 0 1;
+    background: transparent;
+    border-right: solid #444444; /* Vertical border dividing left and right panes */
+}
+
+/* DetailPanel on the right */
+DetailPanel {
+    width: 45%;
+    padding: 0 4;
+    background: transparent;
+}
+
+/* Rows in lists */
+EntryRow, EmailRow, SettingRow {
+    height: 1;
+    padding: 0 1;
+    color: #888888;
+    background: transparent;
+}
+
+EntryRow.selected, EmailRow.selected, SettingRow.selected {
+    background: #879792;
+    color: #1e1e2e;
+    width: auto;
     text-style: bold;
 }
 
+/* Custom Header styling */
+CustomHeader {
+    height: 1;
+    background: transparent;
+    border-bottom: solid #444444;
+    padding: 0 2;
+}
+
+#header-tabs {
+    width: 1fr;
+    content-align: left middle;
+    background: transparent;
+}
+
+#header-count {
+    width: auto;
+    content-align: right middle;
+    background: transparent;
+}
+
+/* Standard Footer styling */
 Footer {
     background: transparent;
+    color: #888888;
+}
+
+Footer .footer--key {
+    background: transparent;
+    color: #a3be8c;
+    text-style: bold;
+}
+#footer-bindings{
+    color: grey;
+    background: #aeaeae;
+}
+
+Footer .footer--description {
+    background: transparent;
+    color: #888888;
+}
+
+Footer .footer--highlight {
+    background: transparent;
+}
+
+/* Details and forms styling */
+DetailView, EditForm, FieldGroup, PasswordField {
+    background: transparent;
+}
+
+FieldGroup, PasswordField {
+    margin: 0 0 1 0;
+}
+
+/* Input Fields inside forms */
+Input {
+    margin: 0 0 1 0;
+    background: #333333 50%;
+    border: none;
+    height: 1;
     color: white;
 }
 
-#left-pane {
-    width: 35%;
-    border: solid white;
-    padding: 1;
-    background: transparent;
+Input:focus {
+    background: #444444 80%;
+    color: white;
 }
 
-#right-pane {
-    width: 65%;
-    border: solid white;
-    padding: 1;
-    background: transparent;
+
+CustomHeader {
+    dock: top;
+    height: 2;
 }
 
-Screen {
-    layout: vertical;
-}
-
-Horizontal {
+#body {
     height: 1fr;
-}
-
-#entry-list {
-    width: 35%;
-    border: solid white;
-    padding: 1 0;
-}
-
-#entry-details {
-    width: 65%;
-    border: solid white;
-    padding: 1 2;
-}
-
-ListView {
-    scrollbar-size: 0 0;
 }
