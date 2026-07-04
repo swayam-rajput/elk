@@ -29,7 +29,7 @@ DetailPanel {
 /* Rows in lists */
 EntryRow, EmailRow, SettingRow {
     height: 1;
-    padding: 0 1 0 0;
+    padding: 0 1;
     color: #888888;
     background: transparent;
 }
