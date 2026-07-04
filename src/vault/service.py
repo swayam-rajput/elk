@@ -242,3 +242,14 @@ class VaultService:
             for email in self._vault.emails
             if email.id != email_id
         ]
+
+    def update_email(self, email: Email):
+        if self._vault is None:
+            raise ValueError("Vault is locked.")
+
+        for i, e in enumerate(self._vault.emails):
+            if e.id == email.id:
+                self._vault.emails[i] = email
+                return
+
+        raise ValueError(f"Email {email.id} not found.")
