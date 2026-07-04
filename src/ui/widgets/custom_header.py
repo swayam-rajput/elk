@@ -28,7 +28,7 @@ class CustomHeader(Horizontal):
         markup_parts = []
         for i, (num, name) in enumerate(tabs, start=1):
             if i == self.active_tab:
-                markup_parts.append(f"[gray]{num} {name}[/gray]")
+                markup_parts.append(f"[#262624 on #879792]{num} {name}[/]")
             else:
                 markup_parts.append(f"[gray]{num} {name}[/gray]")
         

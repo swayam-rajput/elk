@@ -51,6 +51,7 @@ CustomHeader {
 
 #header-tabs {
     width: 1fr;
+    text-style: bold;
     content-align: left middle;
     background: transparent;
 }
@@ -70,7 +71,6 @@ Footer {
 Footer .footer--key {
     background: transparent;
     color: #a3be8c;
-    text-style: bold;
 }
 #footer-bindings{
     color: grey;
