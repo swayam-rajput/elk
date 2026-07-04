@@ -28,6 +28,7 @@ class PasswordsScreen(Screen):
         self.service = service
         self._selected_entry: Entry | None = None
         self._editing = False
+        self._emails = self.service.get_emails()
 
     def compose(self) -> ComposeResult:
         yield CustomHeader(active_tab=1)
@@ -45,19 +46,19 @@ class PasswordsScreen(Screen):
             self._selected_entry = entries[message.index]
             if not self._editing:
                 detail = self.query_one(DetailPanel)
-                detail.show_entry(self._selected_entry)
+                detail.show_entry(self._selected_entry, self._emails)
 
     def action_add_entry(self) -> None:
         new_entry = Entry(
             id=RandomGenerator.generate_uuid(),
             site=Site(name="", url=""),
-            email_id="",
+            email_id=self._emails[0].address if self._emails else "",
             username="",
             password="",
             notes="",
         )
         self.service.add_entry(new_entry)
-        self.service.save()
+
         entries = self.service.get_entries()
         new_index = len(entries) - 1
         entry_list = self.query_one(ScrollableList)
@@ -65,14 +66,14 @@ class PasswordsScreen(Screen):
         self._selected_entry = new_entry
         self._editing = True
         detail = self.query_one(DetailPanel)
-        detail.show_edit(new_entry)
+        detail.show_edit(new_entry, self._emails)
 
     def action_delete_entry(self) -> None:
         if self._selected_entry is None or self._editing:
             return
         entry_id = self._selected_entry.id
         self.service.delete_entry(entry_id)
-        self.service.save()
+
         self._selected_entry = None
         self._editing = False
         self._refresh_entries()
@@ -84,7 +85,7 @@ class PasswordsScreen(Screen):
             return
         self._editing = True
         detail = self.query_one(DetailPanel)
-        detail.show_edit(self._selected_entry)
+        detail.show_edit(self._selected_entry, self.service.get_emails())
 
     def action_save_entry(self) -> None:
         if not self._editing:
@@ -100,7 +101,7 @@ class PasswordsScreen(Screen):
         updated = Entry(
             id=data["id"],
             site=Site(name=data["site_name"], url=data["site_url"]),
-            email_id=original.email_id,
+            email_id=data['email_id'],
             username=data["username"],
             password=data["password"],
             notes=data["notes"],
@@ -108,10 +109,10 @@ class PasswordsScreen(Screen):
             created_at=original.created_at,
         )
         self.service.update_entry(updated)
-        self.service.save()
+
         self._editing = False
         self._selected_entry = updated
-        detail.show_entry(updated)
+        detail.show_entry(updated, self._emails)
         self._refresh_entries()
         self.query_one(ScrollableList).focus()
 
@@ -121,7 +122,7 @@ class PasswordsScreen(Screen):
         self._editing = False
         if self._selected_entry:
             detail = self.query_one(DetailPanel)
-            detail.show_entry(self._selected_entry)
+            detail.show_entry(self._selected_entry, self._emails)
         self.query_one(ScrollableList).focus()
 
     def action_reveal_password(self) -> None:
@@ -145,7 +146,7 @@ class PasswordsScreen(Screen):
             pass
         if entries:
             self._selected_entry = entries[0]
-            self.query_one(DetailPanel).show_entry(entries[0])
+            self.query_one(DetailPanel).show_entry(entries[0], self._emails)
         else:
             self._selected_entry = None
             self.query_one(DetailPanel).remove_children()

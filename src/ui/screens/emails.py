@@ -43,7 +43,7 @@ class EmailsScreen(Screen):
             self._selected_email = emails[message.index]
             if not self._editing:
                 detail = self.query_one(DetailPanel)
-                detail.show_item(self._selected_email)
+                detail.show_item(self._selected_email, emails)
 
     def action_add_email(self) -> None:
         new_email = Email(
@@ -60,7 +60,7 @@ class EmailsScreen(Screen):
         self._selected_email = new_email
         self._editing = True
         detail = self.query_one(DetailPanel)
-        detail.show_edit(new_email)
+        detail.show_edit(new_email, emails)
 
     def action_delete_email(self) -> None:
         if self._selected_email is None or self._editing:
@@ -79,7 +79,7 @@ class EmailsScreen(Screen):
             return
         self._editing = True
         detail = self.query_one(DetailPanel)
-        detail.show_edit(self._selected_email)
+        detail.show_edit(self._selected_email, self.service.get_emails())
 
     def action_save_email(self) -> None:
         if not self._editing:
@@ -101,7 +101,7 @@ class EmailsScreen(Screen):
         self.service.save()
         self._editing = False
         self._selected_email = updated
-        detail.show_item(updated)
+        detail.show_item(updated, self.service.get_emails())
         self._refresh_emails()
         self.query_one(ScrollableList).focus()
 
@@ -111,7 +111,7 @@ class EmailsScreen(Screen):
         self._editing = False
         if self._selected_email:
             detail = self.query_one(DetailPanel)
-            detail.show_item(self._selected_email)
+            detail.show_item(self._selected_email, self.service.get_emails())
         self.query_one(ScrollableList).focus()
 
     def _refresh_emails(self) -> None:
@@ -124,7 +124,7 @@ class EmailsScreen(Screen):
             pass
         if emails:
             self._selected_email = emails[0]
-            self.query_one(DetailPanel).show_item(emails[0])
+            self.query_one(DetailPanel).show_item(self._selected_email,emails)
         else:
             self._selected_email = None
             self.query_one(DetailPanel).remove_children()

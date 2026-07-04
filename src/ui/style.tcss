@@ -9,6 +9,43 @@ Screen {
     height: 1fr;
     background: transparent;
 }
+Select {
+    background: transparent;
+    border: none;
+    height: 2;
+    margin: 0 0 0 0;
+    padding: 0 1;
+}
+
+Select:focus {
+    background: transparent;
+    border: none;
+}
+
+Select.-expandedq {
+    background: transparent;
+    border: none;
+}
+SelectionList {
+    background: transparent;
+    padding: 2 1;
+
+    border: none;
+}
+
+SelectionList > .selection-list--option {
+
+    border:none
+}
+
+SelectionList > .selection-list--option:hover {
+
+}
+
+SelectionList > .selection-list--option.-selected {
+
+    color: #efefee;
+}
 
 /* ScrollableList on the left */
 ScrollableList {
@@ -97,11 +134,15 @@ FieldGroup, PasswordField {
 
 /* Input Fields inside forms */
 Input {
-    margin: 0 0 1 0;
+    margin: 0 0 0 0;
     background: #333333 50%;
     border: none;
-    height: 1;
+    height: 2;
+    text-align: justify;
+
+
     color: white;
+    padding: 0 1;
 }
 
 Input:focus {

@@ -62,6 +62,7 @@ def main():
             service.unlock_vault(
                 master_password,
             )
+            print(service._vault)
 
         except ValueError as e:
 

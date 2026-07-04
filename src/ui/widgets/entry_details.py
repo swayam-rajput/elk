@@ -1,15 +1,16 @@
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.widgets import Input, Static
+from textual.widgets import Input, Static, Select
 
 from models.entry import Entry
 from models.email import Email
 
 
 class DetailView(Static):
-    def __init__(self, item) -> None:
+    def __init__(self, item, emails) -> None:
         super().__init__()
         self._item = item
+        self._emails = emails
         self._password_visible = False
 
     def toggle_password(self) -> None:
@@ -20,25 +21,38 @@ class DetailView(Static):
         lines = []
         if isinstance(self._item, Entry):
             lines.append(f"[white]{self._item.site.name}[/white]")
-            if self._item.site.url:
-                lines.append(f"[gray]URL:[/gray] {self._item.site.url}")
-            if self._item.username:
-                lines.append(f"[gray]Username:[/gray] {self._item.username}")
             
-            pwd = self._item.password if self._password_visible else "\u25cf" * 16
+            lines.append(f"[gray]URL:[/gray] {self._item.site.url}")
+                        
+            email = next(
+                (
+                    email.address
+                    for email in self._emails
+                    if email.id == self._item.email_id
+                ),
+                "Unknown Email",
+            )
+
+            lines.append(f"[gray]Email:[/] {email}")
+            
+            lines.append(f"[gray]Username:[/gray] {self._item.username}")
+            
+            pwd = self._item.password if self._password_visible else "•" * 10
             lines.append(f"[gray]Password:[/gray] {pwd}")
             
-            if self._item.notes:
-                lines.append(f"[gray]Notes:[/gray] {self._item.notes}")
+            lines.append(f"[gray]Notes:[/gray]")
+            
+            lines.append(f"{self._item.notes}")
+        
         elif isinstance(self._item, Email):
-            lines.append(f"[white]Email Account[/white]")
-            lines.append(f"[gray]Address:[/gray] {self._item.address}")
+            lines.append(f"[white]Email Account[/white]\n")
+            lines.append(f"{self._item.address}\n")
             if self._item.label:
                 lines.append(f"[gray]Label:[/gray] {self._item.label}")
         elif type(self._item).__name__ == "SettingItem":
             lines.append(f"[white]{self._item.label}[/white]")
             lines.append(f"[gray]Value:[/gray] {self._item.value}")
-            lines.append(f"[gray]Description:[/gray] {self._item.description}")
+            lines.append(f"[gray]Description: {self._item.description}[/]")
             
         return "\n".join(lines)
 
@@ -46,9 +60,10 @@ class DetailView(Static):
 class EditForm(Vertical):
     can_focus = True
 
-    def __init__(self, item) -> None:
+    def __init__(self, item, emails) -> None:
         super().__init__()
         self._item = item
+        self._emails = emails
 
     def compose(self) -> ComposeResult:
         if isinstance(self._item, Entry):
@@ -58,6 +73,23 @@ class EditForm(Vertical):
             self._url_input = Input(
                 value=self._item.site.url, placeholder="URL"
             )
+            print("Entry email_id:", self._item.email_id)
+            print("Valid IDs:", [e.id for e in self._emails])
+            self._email_select = Select(
+                options=[
+                    (
+                        f"{email.label} ({email.address})",
+                        email.id,
+                    )
+                    for email in self._emails
+                ],
+                
+                compact=True,
+                # value=self._item.email_id if self._item.email_id in [e.id for e in self._emails] else self._emails[0],
+                prompt="Email Account",
+                allow_blank=True
+            )
+
             self._username_input = Input(
                 value=self._item.username or "", placeholder="Username"
             )
@@ -70,6 +102,7 @@ class EditForm(Vertical):
             for inp in (
                 self._site_input,
                 self._url_input,
+                self._email_select,
                 self._username_input,
                 self._password_input,
                 self._notes_input,
@@ -77,7 +110,7 @@ class EditForm(Vertical):
                 yield inp
         elif isinstance(self._item, Email):
             self._address_input = Input(
-                value=self._item.address, placeholder="Email Address"
+                value=self._item.address, placeholder="Email Account"
             )
             self._label_input = Input(
                 value=self._item.label, placeholder="Label"
@@ -99,11 +132,13 @@ class EditForm(Vertical):
             inputs.first().focus()
 
     def collect(self) -> dict:
+        # print(self._email_select.value)
         if isinstance(self._item, Entry):
             return {
                 "id": self._item.id,
                 "site_name": self._site_input.value,
                 "site_url": self._url_input.value,
+                "email_id": self._email_select.value,
                 "username": self._username_input.value or None,
                 "password": self._password_input.value,
                 "notes": self._notes_input.value,
@@ -126,18 +161,18 @@ class DetailPanel(Vertical):
         super().__init__(**kwargs)
         self._current_item = None
 
-    def show_item(self, item) -> None:
+    def show_item(self, item, emails) -> None:
         self._current_item = item
         self.remove_children()
-        self.mount(DetailView(item))
+        self.mount(DetailView(item, emails))
 
-    def show_entry(self, entry) -> None:
-        self.show_item(entry)
+    def show_entry(self, entry, emails) -> None:
+        self.show_item(entry, emails)
 
-    def show_edit(self, item) -> None:
+    def show_edit(self, item, emails) -> None:
         self._current_item = item
         self.remove_children()
-        self.mount(EditForm(item))
+        self.mount(EditForm(item, emails))
 
     def toggle_password(self) -> None:
         view = self.query(DetailView).first()

@@ -5,6 +5,8 @@ from cryptography.exceptions import InvalidTag
 from models.entry import Entry
 from models.email import Email
 
+from datetime import datetime
+
 from models.vault import Vault
 from models.enc_vault import (
     EncryptedVault,
@@ -189,6 +191,16 @@ class VaultService:
 
         return self._vault.entries
 
+    def get_entry(self, entry_id: str) -> Entry | None:
+        if self._vault is None:
+            return None
+
+        for entry in self._vault.entries:
+            if entry.id == entry_id:
+                return entry
+
+        return None
+
 
     def get_emails(self) -> list[Email]:
         if self._vault is None:
@@ -196,12 +208,28 @@ class VaultService:
 
         return self._vault.emails
 
+    def get_email(self, email_id: str) -> Email | None:
+        if self._vault is None:
+            return None
+
+        for email in self._vault.emails:
+            if email.id == email_id:
+                return email
+
+        return None
 
     def add_entry(self, entry: Entry):
         if self._vault is None:
             raise ValueError("Vault is locked.")
-
+        for e in self.get_entries():
+            if (
+                e.site.url == entry.site.url
+                and e.email_id == entry.email_id
+            ):
+                print("Entry already exists.")
+                return
         self._vault.entries.append(entry)
+        self.save()
 
 
     def add_email(self, email: Email):
@@ -209,6 +237,7 @@ class VaultService:
             raise ValueError("Vault is locked.")
 
         self._vault.emails.append(email)
+        self.save()
 
 
     def update_entry(self, entry: Entry):
@@ -217,7 +246,9 @@ class VaultService:
 
         for i, e in enumerate(self._vault.entries):
             if e.id == entry.id:
+                entry.updated_at = datetime.now()
                 self._vault.entries[i] = entry
+                self.save()
                 return
 
         raise ValueError(f"Entry {entry.id} not found.")
@@ -231,17 +262,25 @@ class VaultService:
             for entry in self._vault.entries
             if entry.id != entry_id
         ]
+        self.save()
 
 
     def delete_email(self, email_id: str):
         if self._vault is None:
             raise ValueError("Vault is locked.")
 
+        for entry in self._vault.entries:
+            if entry.email_id == email_id:
+                raise ValueError(
+                    "Email is used by one or more entries."
+                )
+
         self._vault.emails = [
             email
             for email in self._vault.emails
             if email.id != email_id
         ]
+        self.save()
 
     def update_email(self, email: Email):
         if self._vault is None:
@@ -250,6 +289,7 @@ class VaultService:
         for i, e in enumerate(self._vault.emails):
             if e.id == email.id:
                 self._vault.emails[i] = email
+                self.save()
                 return
 
-        raise ValueError(f"Email {email.id} not found.")
+        raise ValueError(f"Email {email.id} not found.")
