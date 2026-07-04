@@ -32,7 +32,7 @@ class CustomHeader(Horizontal):
             else:
                 markup_parts.append(f"[gray]{num} {name}[/gray]")
         
-        return "   |   ".join(markup_parts)
+        return "  [gray] | [/]  ".join(markup_parts)
 
     def watch_active_tab(self, active_tab: int) -> None:
         try:
