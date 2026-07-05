@@ -10,7 +10,8 @@ Screen {
     background: transparent;
 }
 Select {
-    background: transparent;
+    background: #333333 50%;
+    
     border: none;
     height: 2;
     margin: 0 0 0 0;
@@ -22,19 +23,24 @@ Select:focus {
     border: none;
 }
 
-Select.-expandedq {
+
+
+Select.-expanded {
     background: transparent;
     border: none;
+    padding: 0 1;
 }
 SelectionList {
-    background: transparent;
-    padding: 2 1;
+    background: #aeffff 50%;
+    
+    padding: 0 1;
 
     border: none;
 }
 
 SelectionList > .selection-list--option {
-
+    background: #333333 50%;
+    
     border:none
 }
 
@@ -43,8 +49,26 @@ SelectionList > .selection-list--option:hover {
 }
 
 SelectionList > .selection-list--option.-selected {
-
+    background: #879792;
     color: #efefee;
+}
+Select {
+    background: #333333 50%;
+    color: $text;
+    border: none;
+}
+
+
+
+Select > SelectCurrent {
+    background: #333333 50%;
+    
+    color: $text;
+}
+
+Select > SelectCurrent:focus {
+background: #333333 50%;
+    color: $text;
 }
 
 /* ScrollableList on the left */
