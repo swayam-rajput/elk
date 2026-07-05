@@ -73,19 +73,20 @@ class EditForm(Vertical):
             self._url_input = Input(
                 value=self._item.site.url, placeholder="URL"
             )
+            
             print("Entry email_id:", self._item.email_id)
             print("Valid IDs:", [e.id for e in self._emails])
             self._email_select = Select(
                 options=[
                     (
-                        f"{email.label} ({email.address})",
+                        f"{email.address} ({email.label})",
                         email.id,
                     )
                     for email in self._emails
                 ],
                 
                 compact=True,
-                # value=self._item.email_id if self._item.email_id in [e.id for e in self._emails] else self._emails[0],
+                value=self._item.email_id,
                 prompt="Email Account",
                 allow_blank=True
             )
