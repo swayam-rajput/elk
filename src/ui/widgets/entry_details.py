@@ -80,15 +80,16 @@ class EditForm(Vertical):
                 options=[
                     (
                         f"{email.address} ({email.label})",
-                        email.id,
+                        email.address,
                     )
                     for email in self._emails
                 ],
+
                 
                 compact=True,
-                value=self._item.email_id,
+                value=self._item.email_id or "Select email",
                 prompt="Email Account",
-                allow_blank=True
+                allow_blank=False
             )
 
             self._username_input = Input(
