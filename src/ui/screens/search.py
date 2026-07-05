@@ -23,6 +23,7 @@ class SearchScreen(Screen):
         self.service = service
         self._results = []
         self._selected_item = None
+        self._emails = service.get_emails()
 
     def compose(self) -> ComposeResult:
         yield CustomHeader(active_tab=3, item_count=0, item_type="results")
@@ -44,7 +45,7 @@ class SearchScreen(Screen):
         if 0 <= message.index < len(self._results):
             self._selected_item = self._results[message.index]
             detail = self.query_one(DetailPanel)
-            detail.show_item(self._selected_item)
+            detail.show_item(self._selected_item, self._emails)
 
     def action_focus_search(self) -> None:
         inp = self.query_one("#search-input", Input)
@@ -62,7 +63,7 @@ class SearchScreen(Screen):
     def _perform_search(self, query: str) -> None:
         query = query.strip().lower()
         entries = self.service.get_entries()
-        emails = self.service.get_emails()
+        emails = self._emails
         
         results = []
         for entry in entries:
@@ -93,7 +94,7 @@ class SearchScreen(Screen):
         detail = self.query_one(DetailPanel)
         if results:
             self._selected_item = results[0]
-            detail.show_item(results[0])
+            detail.show_item(results[0], emails)
         else:
             self._selected_item = None
             detail.remove_children()
