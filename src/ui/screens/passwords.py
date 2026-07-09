@@ -1,7 +1,7 @@
-from textual.app import ComposeResult
-from textual.containers import Horizontal
+from textual.app import ComposeResult, Binding
+from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import Footer
+from textual.widgets import Footer, Input
 
 from crypto.random import RandomGenerator
 from models.entry import Entry, Site
@@ -14,13 +14,15 @@ from ui.widgets.custom_header import CustomHeader
 
 class PasswordsScreen(Screen):
     BINDINGS = [
-        ("a", "add_entry", "Add"),
-        ("d", "delete_entry", "Delete"),
-        ("e", "edit_entry", "Edit"),
-        ("p", "reveal_password", "Reveal"),
-        ("y", "copy_password", "Copy"),
-        ("ctrl+s", "save_entry", "Save"),
-        ("escape", "cancel_edit", "Cancel"),
+        Binding("a", "add_entry", "Add"),
+        Binding("d", "delete_entry", "Delete"),
+        Binding("e", "edit_entry", "Edit"),
+        Binding("p", "reveal_password", "Reveal"),
+        Binding("y", "copy_password", "Copy"),
+        Binding("ctrl+s", "save_entry", "Save"),
+        Binding("escape", "cancel_edit", "Cancel"),
+        Binding("f", "toggle_search", "Search", priority=True),
+        Binding("ctrl+f", "toggle_search", "Search", show=False, priority=True),
     ]
 
     def __init__(self, service: VaultService):
@@ -28,10 +30,18 @@ class PasswordsScreen(Screen):
         self.service = service
         self._selected_entry: Entry | None = None
         self._editing = False
+        self._adding = False
         self._emails = self.service.get_emails()
+        self._search_visible = False
+        self._search_query = ""
 
     def compose(self) -> ComposeResult:
         yield CustomHeader(active_tab=1)
+        yield Input(
+            placeholder="Search passwords...",
+            id="search-input",
+            classes="-hidden",
+        )
         with Horizontal(id="main-layout"):
             yield ScrollableList(id="entry-list")
             yield DetailPanel(id="entry-details")
@@ -39,14 +49,60 @@ class PasswordsScreen(Screen):
 
     def on_mount(self) -> None:
         self._refresh_entries()
+        self.query_one(ScrollableList).focus()
 
     def on_selection_changed(self, message: SelectionChanged) -> None:
-        entries = self.service.get_entries()
-        if 0 <= message.index < len(entries):
-            self._selected_entry = entries[message.index]
+        items = self._get_filtered_entries()
+        if 0 <= message.index < len(items):
+            self._selected_entry = items[message.index]
             if not self._editing:
                 detail = self.query_one(DetailPanel)
                 detail.show_entry(self._selected_entry, self._emails)
+
+    # ── Search ──────────────────────────────────────────────
+
+    def action_toggle_search(self) -> None:
+        if self._editing:
+            return
+        inp = self.query_one("#search-input", Input)
+        if self._search_visible:
+            # Hide search, clear query, restore full list
+            self._search_visible = False
+            self._search_query = ""
+            inp.value = ""
+            inp.add_class("-hidden")
+            self.query_one(ScrollableList).focus()
+            self._refresh_entries()
+        else:
+            self._search_visible = True
+            inp.remove_class("-hidden")
+            inp.focus()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id == "search-input":
+            self._search_query = event.value.strip().lower()
+            self._refresh_entries()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "search-input":
+            self.query_one(ScrollableList).focus()
+
+    def _get_filtered_entries(self) -> list[Entry]:
+        entries = self.service.get_entries()
+        query = self._search_query
+        if not query:
+            return entries
+        return [
+            e for e in entries
+            if (
+                query in e.site.name.lower()
+                or query in e.site.url.lower()
+                or query in (e.username or "").lower()
+                or query in e.notes.lower()
+            )
+        ]
+
+    # ── CRUD ────────────────────────────────────────────────
 
     def action_add_entry(self) -> None:
         new_entry = Entry(
@@ -65,6 +121,7 @@ class PasswordsScreen(Screen):
         entry_list.load_items(entries, select_index=new_index)
         self._selected_entry = new_entry
         self._editing = True
+        self._adding = True
         detail = self.query_one(DetailPanel)
         detail.show_edit(new_entry, self._emails)
 
@@ -76,6 +133,7 @@ class PasswordsScreen(Screen):
 
         self._selected_entry = None
         self._editing = False
+        self._adding = False
         self._refresh_entries()
         detail = self.query_one(DetailPanel)
         detail.remove_children()
@@ -84,6 +142,7 @@ class PasswordsScreen(Screen):
         if self._selected_entry is None or self._editing:
             return
         self._editing = True
+        self._adding = False
         detail = self.query_one(DetailPanel)
         detail.show_edit(self._selected_entry, self.service.get_emails())
 
@@ -111,6 +170,7 @@ class PasswordsScreen(Screen):
         self.service.update_entry(updated)
 
         self._editing = False
+        self._adding = False
         self._selected_entry = updated
         detail.show_entry(updated, self._emails)
         self._refresh_entries()
@@ -118,11 +178,17 @@ class PasswordsScreen(Screen):
 
     def action_cancel_edit(self) -> None:
         if not self._editing:
+            # If search is visible, close it on Escape
+            if self._search_visible:
+                self.action_toggle_search()
             return
+        # If we were adding a new entry, delete the empty record
+        if self._adding and self._selected_entry:
+            self.service.delete_entry(self._selected_entry.id)
+            self._selected_entry = None
         self._editing = False
-        if self._selected_entry:
-            detail = self.query_one(DetailPanel)
-            detail.show_entry(self._selected_entry, self._emails)
+        self._adding = False
+        self._refresh_entries()
         self.query_one(ScrollableList).focus()
 
     def action_reveal_password(self) -> None:
@@ -137,11 +203,12 @@ class PasswordsScreen(Screen):
         self.app.copy_to_clipboard(self._selected_entry.password)
 
     def _refresh_entries(self) -> None:
-        entries = self.service.get_entries()
+        entries = self._get_filtered_entries()
         entry_list = self.query_one(ScrollableList)
         entry_list.load_items(entries)
         try:
-            self.query_one(CustomHeader).item_count = len(entries)
+            header = self.query_one(CustomHeader)
+            header.item_count = len(entries)
         except Exception:
             pass
         if entries:

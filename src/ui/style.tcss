@@ -183,3 +183,24 @@ CustomHeader {
 #body {
     height: 1fr;
 }
+
+/* Inline search input */
+#search-input {
+    height: 2;
+    margin: 0 0;
+    padding: 0 1;
+    background: #333333 50%;
+    color: white;
+    border: none;
+    border-bottom: solid #444444;
+}
+
+#search-input:focus {
+    background: #444444 80%;
+    color: white;
+}
+
+/* Hidden utility */
+.-hidden {
+    display: none;
+}
