@@ -10,10 +10,9 @@ class PasswordManager(App):
 
     BINDINGS = [
         Binding("q", "quit", "Quit", priority=True),
-        Binding("1", "tab_passwords", "Passwords"),
-        Binding("2", "tab_emails", "Emails"),
-        Binding("3", "tab_search", "Search"),
-        Binding("4", "tab_settings", "Settings"),
+        Binding("1", "tab_passwords", "Passwords", show=False),
+        Binding("2", "tab_emails", "Emails", show=False),
+        Binding("3", "tab_settings", "Settings", show=False),
     ]
 
     def __init__(self, service: VaultService):
@@ -30,11 +29,6 @@ class PasswordManager(App):
         from ui.screens.emails import EmailsScreen
 
         self._switch_to(EmailsScreen)
-
-    def action_tab_search(self):
-        from ui.screens.search import SearchScreen
-
-        self._switch_to(SearchScreen)
 
     def action_tab_settings(self):
         from ui.screens.settings import SettingsScreen

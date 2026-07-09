@@ -33,7 +33,7 @@ class SettingsScreen(Screen):
         self._editing = False
 
     def compose(self) -> ComposeResult:
-        yield CustomHeader(active_tab=4, item_count=2, item_type="settings")
+        yield CustomHeader(active_tab=3, item_count=2, item_type="settings")
         with Horizontal(id="main-layout"):
             yield ScrollableList(id="entry-list")
             yield DetailPanel(id="entry-details")
