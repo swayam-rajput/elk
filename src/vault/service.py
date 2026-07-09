@@ -270,6 +270,7 @@ class VaultService:
             raise ValueError("Vault is locked.")
 
         for entry in self._vault.entries:
+            print(entry)
             if entry.email_id == email_id:
                 raise ValueError(
                     "Email is used by one or more entries."

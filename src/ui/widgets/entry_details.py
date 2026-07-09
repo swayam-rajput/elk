@@ -71,7 +71,7 @@ class EditForm(Vertical):
                 value=self._item.site.name, placeholder="Site"
             )
             self._url_input = Input(
-                value=self._item.site.url, placeholder="URL"
+                value=self._item.site.url or 'https://', placeholder="URL"
             )
             
             print("Entry email_id:", self._item.email_id)
@@ -139,7 +139,7 @@ class EditForm(Vertical):
             return {
                 "id": self._item.id,
                 "site_name": self._site_input.value,
-                "site_url": self._url_input.value,
+                "site_url": self._url_input.value or 'https://',
                 "email_id": self._email_select.value,
                 "username": self._username_input.value or None,
                 "password": self._password_input.value,
@@ -163,7 +163,7 @@ class DetailPanel(Vertical):
         super().__init__(**kwargs)
         self._current_item = None
 
-    def show_item(self, item, emails) -> None:
+    def show_item(self, item, emails=None) -> None:
         self._current_item = item
         self.remove_children()
         self.mount(DetailView(item, emails))
@@ -171,7 +171,7 @@ class DetailPanel(Vertical):
     def show_entry(self, entry, emails) -> None:
         self.show_item(entry, emails)
 
-    def show_edit(self, item, emails) -> None:
+    def show_edit(self, item, emails=None) -> None:
         self._current_item = item
         self.remove_children()
         self.mount(EditForm(item, emails))
