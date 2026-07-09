@@ -28,7 +28,7 @@ class DetailView(Static):
                 (
                     email.address
                     for email in self._emails
-                    if email.id == self._item.email_id
+                    if email.address == self._item.email_id
                 ),
                 "Unknown Email",
             )
@@ -74,8 +74,6 @@ class EditForm(Vertical):
                 value=self._item.site.url or 'https://', placeholder="URL"
             )
             
-            print("Entry email_id:", self._item.email_id)
-            print("Valid IDs:", [e.id for e in self._emails])
             self._email_select = Select(
                 options=[
                     (
