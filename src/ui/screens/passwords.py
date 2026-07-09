@@ -5,6 +5,7 @@ from textual.widgets import Footer, Input
 
 from crypto.random import RandomGenerator
 from models.entry import Entry, Site
+from models.email import Email
 from vault.service import VaultService
 from ui.messages import SelectionChanged
 from ui.widgets.entry_details import DetailPanel, EditForm
@@ -38,7 +39,7 @@ class PasswordsScreen(Screen):
     def compose(self) -> ComposeResult:
         yield CustomHeader(active_tab=1)
         yield Input(
-            placeholder="Search passwords...",
+            placeholder="Search passwords and emails...",
             id="search-input",
             classes="-hidden",
         )
@@ -52,12 +53,12 @@ class PasswordsScreen(Screen):
         self.query_one(ScrollableList).focus()
 
     def on_selection_changed(self, message: SelectionChanged) -> None:
-        items = self._get_filtered_entries()
+        items = self._get_filtered_items()
         if 0 <= message.index < len(items):
             self._selected_entry = items[message.index]
             if not self._editing:
                 detail = self.query_one(DetailPanel)
-                detail.show_entry(self._selected_entry, self._emails)
+                detail.show_item(self._selected_entry, self._emails)
 
     # ── Search ──────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ class PasswordsScreen(Screen):
         if event.input.id == "search-input":
             self.query_one(ScrollableList).focus()
 
-    def _get_filtered_entries(self) -> list[Entry]:
+    def _get_filtered_items(self) -> list:
         entries = self.service.get_entries()
         query = self._search_query
         if not query:
@@ -99,6 +100,7 @@ class PasswordsScreen(Screen):
                 or query in e.site.url.lower()
                 or query in (e.username or "").lower()
                 or query in e.notes.lower()
+                or query in (e.email_id or "").lower()
             )
         ]
 
@@ -203,17 +205,17 @@ class PasswordsScreen(Screen):
         self.app.copy_to_clipboard(self._selected_entry.password)
 
     def _refresh_entries(self) -> None:
-        entries = self._get_filtered_entries()
+        items = self._get_filtered_items()
         entry_list = self.query_one(ScrollableList)
-        entry_list.load_items(entries)
+        entry_list.load_items(items)
         try:
             header = self.query_one(CustomHeader)
-            header.item_count = len(entries)
+            header.item_count = len(items)
         except Exception:
             pass
-        if entries:
-            self._selected_entry = entries[0]
-            self.query_one(DetailPanel).show_entry(entries[0], self._emails)
+        if items:
+            self._selected_entry = items[0]
+            self.query_one(DetailPanel).show_item(items[0], self._emails)
         else:
             self._selected_entry = None
             self.query_one(DetailPanel).remove_children()
