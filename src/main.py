@@ -6,6 +6,8 @@ from models.enc_vault import EncryptedVault, EncryptionMetadata, KDFMetadata
 from storage.local import LocalStorage
 from vault.service import VaultService
 from ui.app import PasswordManager
+from storage.github import GitHubStorage
+from sync.sync_manager import SyncManager
 
 def save_encrypted_vault(storage: LocalStorage, vault: EncryptedVault) -> None:
     """
@@ -33,8 +35,21 @@ def load_encrypted_vault(storage: LocalStorage) -> EncryptedVault:
 
 
 def main():
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+    token = os.getenv('GITHUB_TOKEN')
     storage = LocalStorage()
-
+    github = GitHubStorage(
+        username="swayam-rajput",
+        repository="password-vault",
+        token=token,
+    )
+    sync = SyncManager(
+        local=storage,
+        remote=github,
+    )
+    sync.upload()
     service = VaultService(storage)
 
     if not storage.exists():
