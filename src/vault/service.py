@@ -22,11 +22,13 @@ from crypto.encoding import Encoding
 from storage.local import LocalStorage
 from storage.provider import StorageProvider
 from vault.serializer import VaultSerializer
+from sync.sync_manager import SyncManager
 
 class VaultService:
 
-    def __init__(self, storage: StorageProvider):
+    def __init__(self, storage: StorageProvider, sync_manager: SyncManager | None = None):
         self.storage = storage
+        self.sync_manager = sync_manager
         self._vault: Vault | None = None
         self._key: bytes | None = None
         self._salt: bytes | None = None
@@ -79,6 +81,7 @@ class VaultService:
                 nonce=Encoding.bytes_to_base64(nonce),
             ),
             ciphertext=Encoding.bytes_to_base64(ciphertext),
+            updated_at=datetime.now().isoformat(),
         )
 
         self.storage.save(encrypted_vault)
@@ -158,10 +161,16 @@ class VaultService:
                 nonce=Encoding.bytes_to_base64(nonce),
             ),
             ciphertext=Encoding.bytes_to_base64(ciphertext),
+            updated_at=datetime.now().isoformat(),
         )
 
         self.storage.save(encrypted_vault)
+    
+    def sync(self):
+        if self.sync_manager is None:
+            raise ValueError("Sync manager not found.")
 
+        self.sync_manager.sync()
 
 
     def get_entries(self) -> list[Entry]:
@@ -205,8 +214,7 @@ class VaultService:
                 e.site.url == entry.site.url
                 and e.email_id == entry.email_id
             ):
-                print("Entry already exists.")
-                return
+                raise ValueError("An entry for this site and email already exists.")
         self._vault.entries.append(entry)
         self.save()
 
