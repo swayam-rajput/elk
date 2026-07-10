@@ -8,5 +8,7 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "cryptography>=49.0.0",
     "pydantic>=2.13.4",
+    "python-dotenv>=1.2.2",
+    "requests>=2.34.2",
     "textual>=8.2.8",
 ]
