@@ -67,7 +67,12 @@ class EmailsScreen(Screen):
         if self._selected_email is None or self._editing:
             return
         email_id = self._selected_email.id
-        self.service.delete_email(email_id)
+        try:
+            self.service.delete_email(email_id)
+        except ValueError as e:
+            self.app.notify(str(e), severity="error")
+            return
+            
         self._selected_email = None
         self._editing = False
         self._adding = False
