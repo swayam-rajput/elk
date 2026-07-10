@@ -248,9 +248,17 @@ class VaultService:
         if self._vault is None:
             raise ValueError("Vault is locked.")
 
+        email_to_delete = None
+        for email in self._vault.emails:
+            if email.id == email_id:
+                email_to_delete = email
+                break
+        
+        if not email_to_delete:
+            return
+
         for entry in self._vault.entries:
-            print(entry)
-            if entry.email_id == email_id:
+            if entry.email_id == email_to_delete.address:
                 raise ValueError(
                     "Email is used by one or more entries."
                 )
@@ -266,10 +274,19 @@ class VaultService:
         if self._vault is None:
             raise ValueError("Vault is locked.")
 
+        old_address = None
         for i, e in enumerate(self._vault.emails):
             if e.id == email.id:
+                old_address = e.address
                 self._vault.emails[i] = email
-                self.save()
-                return
+                break
+                
+        if old_address is None:
+            raise ValueError(f"Email {email.id} not found.")
 
-        raise ValueError(f"Email {email.id} not found.")
+        if old_address != email.address:
+            for entry in self._vault.entries:
+                if entry.email_id == old_address:
+                    entry.email_id = email.address
+
+        self.save()
