@@ -69,6 +69,7 @@ class GitHubStorage(StorageProvider):
                 **data["encryption"]
             ),
             ciphertext=data["ciphertext"],
+            updated_at=data["updated_at"],
         )
 
     def save(self, vault: EncryptedVault):

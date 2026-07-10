@@ -45,6 +45,7 @@ class LocalStorage(StorageProvider):
                 nonce=data["encryption"]["nonce"],
             ),
             ciphertext=data["ciphertext"],
+            updated_at=data["updated_at"],
         )
 
     def save(self, vault: EncryptedVault) -> None:
