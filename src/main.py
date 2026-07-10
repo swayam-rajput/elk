@@ -35,7 +35,7 @@ def load_encrypted_vault(storage: LocalStorage) -> EncryptedVault:
 def main():
     storage = LocalStorage()
 
-    service = VaultService()
+    service = VaultService(storage)
 
     if not storage.exists():
         master_password = input(

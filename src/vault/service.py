@@ -20,11 +20,13 @@ from crypto.aes import AESManager
 from crypto.encoding import Encoding
 
 from storage.local import LocalStorage
+from storage.provider import StorageProvider
 from vault.serializer import VaultSerializer
 
 class VaultService:
 
-    def __init__(self):
+    def __init__(self, storage: StorageProvider):
+        self.storage = storage
         self._vault: Vault | None = None
         self._key: bytes | None = None
         self._salt: bytes | None = None
@@ -79,28 +81,12 @@ class VaultService:
             ciphertext=Encoding.bytes_to_base64(ciphertext),
         )
 
-        storage = LocalStorage()
+        self.storage.save(encrypted_vault)
 
-        with open(storage.vault_path, "w", encoding="utf-8") as file:
-            json.dump(
-                asdict(encrypted_vault),
-                file,
-                indent=4,
-            )
 
     def unlock_vault(self, master_password: str):
 
-        storage = LocalStorage()
-
-        with open(storage.vault_path, "r", encoding="utf-8") as file:
-            data = json.load(file)
-
-        encrypted_vault = EncryptedVault(
-            version=data["version"],
-            kdf=KDFMetadata(**data["kdf"]),
-            encryption=EncryptionMetadata(**data["encryption"]),
-            ciphertext=data["ciphertext"],
-        )
+        encrypted_vault = self.storage.load()
 
         self._salt = Encoding.base64_to_bytes(
             encrypted_vault.kdf.salt
@@ -174,14 +160,7 @@ class VaultService:
             ciphertext=Encoding.bytes_to_base64(ciphertext),
         )
 
-        storage = LocalStorage()
-
-        with open(storage.vault_path, "w", encoding="utf-8") as file:
-            json.dump(
-                asdict(encrypted_vault),
-                file,
-                indent=4,
-            )
+        self.storage.save(encrypted_vault)
 
 
 
