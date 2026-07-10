@@ -54,9 +54,9 @@ def main():
             return
 
     app = PasswordManager(service)
-    print('app')
+    
     app.run()
-    print('synced')
+    
     if service.dirty:
         service.save()
         service.sync()
