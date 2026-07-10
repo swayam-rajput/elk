@@ -21,72 +21,36 @@ def save_encrypted_vault(storage: LocalStorage, vault: EncryptedVault) -> None:
             indent=4
         )
 
-
-def load_encrypted_vault(storage: LocalStorage) -> EncryptedVault:
-    with open(storage.vault_path, 'r', encoding='utf-8') as file:
-        data = json.load(file)
-    
-    return EncryptedVault(
-        version=data['version'],
-        kdf = KDFMetadata(**data['kdf']),
-        encryption=EncryptionMetadata(**data['encryption']),
-        ciphertext=data['ciphertext']
-    )
-
-
 def main():
-    import os
-    from dotenv import load_dotenv
-    load_dotenv()
-    token = os.getenv('GITHUB_TOKEN')
+
     storage = LocalStorage()
-    github = GitHubStorage(
-        username="swayam-rajput",
-        repository="password-vault",
-        token=token,
-    )
-    sync = SyncManager(
-        local=storage,
-        remote=github,
-    )
-    sync.upload()
     service = VaultService(storage)
 
     if not storage.exists():
+
         master_password = input(
             "Create Master Password: "
         )
 
-        service.create_vault(
-            master_password
-        )
+        service.create_vault(master_password)
 
     else:
 
-        # master_password = input(
-        #     "Master Password: "
-        # )
-        master_password = 'that'
-
-        encrypted_vault = load_encrypted_vault(
-            storage
+        master_password = input(
+            "Master Password: "
         )
 
         try:
-
-            service.unlock_vault(
-                master_password,
-            )
-            print(service._vault)
+            service.unlock_vault(master_password)
 
         except ValueError as e:
-
             print(e)
-
             return
 
     app = PasswordManager(service)
-
+    print('app')
     app.run()
+    print('synced')
+    service.sync()
 if __name__ == "__main__":
     main()
