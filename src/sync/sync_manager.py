@@ -43,6 +43,7 @@ class SyncManager:
         """
         Basic synchronization.
         """
+        print('Syncing...')
 
         local_exists = self.local.exists()
         remote_exists = self.remote.exists()
@@ -50,16 +51,19 @@ class SyncManager:
         if local_exists and not remote_exists:
 
             self.upload()
+            print("Sync Upload Complete")
             return
 
         if remote_exists and not local_exists:
 
             self.download()
+            print("Sync Download Complete")
             return
 
         if local_exists and remote_exists:
 
             self.upload()
+            print("Sync Upload Complete")
             return
 
         raise FileNotFoundError(
