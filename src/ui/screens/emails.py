@@ -105,7 +105,6 @@ class EmailsScreen(Screen):
             label=data["label"],
         )
         self.service.update_email(updated)
-        self.service.save()
         self._editing = False
         self._adding = False
         self._selected_email = updated

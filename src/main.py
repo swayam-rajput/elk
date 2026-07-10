@@ -24,7 +24,13 @@ def save_encrypted_vault(storage: LocalStorage, vault: EncryptedVault) -> None:
 def main():
 
     storage = LocalStorage()
-    service = VaultService(storage)
+    from config import Config
+    
+    github = GitHubStorage(Config.GITHUB_USERNAME, Config.GITHUB_REPO, Config.GITHUB_TOKEN)
+
+    sync_man = SyncManager(storage, github)
+    
+    service = VaultService(storage, sync_man)
 
     if not storage.exists():
 
@@ -51,6 +57,9 @@ def main():
     print('app')
     app.run()
     print('synced')
-    service.sync()
+    if service.dirty:
+        service.save()
+        service.sync()
+
 if __name__ == "__main__":
     main()

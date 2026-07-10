@@ -69,7 +69,7 @@ class SettingsScreen(Screen):
             try:
                 val = int(data["value"])
                 setattr(self.service.vault.settings, data["key"], val)
-                self.service.save()
+                self.service._dirty = True
             except ValueError:
                 pass
                 

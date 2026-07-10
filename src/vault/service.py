@@ -32,6 +32,11 @@ class VaultService:
         self._vault: Vault | None = None
         self._key: bytes | None = None
         self._salt: bytes | None = None
+        self._dirty: bool = False
+
+    @property
+    def dirty(self) -> bool:
+        return self._dirty
 
     @property
     def vault(self) -> Vault | None:
@@ -124,6 +129,8 @@ class VaultService:
         )
     
     def save(self):
+        if not self._dirty:
+            return
 
         if self._vault is None:
             raise ValueError("Vault is locked.")
@@ -165,6 +172,7 @@ class VaultService:
         )
 
         self.storage.save(encrypted_vault)
+        self._dirty = False
     
     def sync(self):
         if self.sync_manager is None:
@@ -216,7 +224,7 @@ class VaultService:
             ):
                 raise ValueError("An entry for this site and email already exists.")
         self._vault.entries.append(entry)
-        self.save()
+        self._dirty = True
 
 
     def add_email(self, email: Email):
@@ -224,7 +232,7 @@ class VaultService:
             raise ValueError("Vault is locked.")
 
         self._vault.emails.append(email)
-        self.save()
+        self._dirty = True
 
 
     def update_entry(self, entry: Entry):
@@ -235,7 +243,7 @@ class VaultService:
             if e.id == entry.id:
                 entry.updated_at = datetime.now()
                 self._vault.entries[i] = entry
-                self.save()
+                self._dirty = True
                 return
 
         raise ValueError(f"Entry {entry.id} not found.")
@@ -249,7 +257,7 @@ class VaultService:
             for entry in self._vault.entries
             if entry.id != entry_id
         ]
-        self.save()
+        self._dirty = True
 
 
     def delete_email(self, email_id: str):
@@ -276,7 +284,7 @@ class VaultService:
             for email in self._vault.emails
             if email.id != email_id
         ]
-        self.save()
+        self._dirty = True
 
     def update_email(self, email: Email):
         if self._vault is None:
@@ -297,4 +305,4 @@ class VaultService:
                 if entry.email_id == old_address:
                     entry.email_id = email.address
 
-        self.save()
+        self._dirty = True
