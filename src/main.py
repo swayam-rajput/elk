@@ -58,8 +58,11 @@ def main():
     app.run()
     
     if service.dirty:
+        print("Changes Detected")
         service.save()
         service.sync()
+    else:
+        print("No Changes Detected")
 
 if __name__ == "__main__":
     main()
