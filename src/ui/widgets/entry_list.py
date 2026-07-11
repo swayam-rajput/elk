@@ -7,6 +7,7 @@ from models.email import Email
 
 
 class ScrollableList(VerticalScroll):
+    can_focus = True
     BINDINGS = [
         ("up", "select_previous"),
         ("down", "select_next"),

@@ -20,10 +20,10 @@ class PasswordsScreen(Screen):
         Binding("e", "edit_entry", "Edit"),
         Binding("p", "reveal_password", "Reveal"),
         Binding("y", "copy_password", "Copy"),
-        Binding("ctrl+s", "save_entry", "Save"),
-        Binding("escape", "cancel_edit", "Cancel"),
         Binding("f", "toggle_search", "Search", priority=True),
         Binding("ctrl+f", "toggle_search", "Search", show=False, priority=True),
+        Binding("ctrl+s", "save_entry", "Save"),
+        Binding("escape", "cancel_edit", "Cancel"),
     ]
 
     def __init__(self, service: VaultService):
