@@ -1,4 +1,8 @@
 from storage.provider import StorageProvider
+from sync.conflicts import (
+    ConflictResolver,
+    ConflictResolution,
+)
 
 
 class SyncManager:
@@ -11,60 +15,56 @@ class SyncManager:
         self.local = local
         self.remote = remote
 
-    def upload(self):
+    def sync(self) -> bool:
         """
-        Upload local vault to GitHub.
+        Synchronize the local and remote vaults.
         """
-
-        if not self.local.exists():
-            raise FileNotFoundError(
-                "Local vault not found."
-            )
-
-        vault = self.local.load()
-
-        self.remote.save(vault)
-
-    def download(self):
-        """
-        Download GitHub vault to local storage.
-        """
-
-        if not self.remote.exists():
-            raise FileNotFoundError(
-                "Remote vault not found."
-            )
-
-        vault = self.remote.load()
-
-        self.local.save(vault)
-
-    def sync(self):
-        """
-        Basic synchronization.
-        """
-        print('Syncing...')
-
-        local_exists = self.local.exists()
-        remote_exists = self.remote.exists()
 
         try:
-            if local_exists and not remote_exists:
-                self.upload()
-                print("Sync Upload Complete")
+
+            local = (
+                self.local.load()
+                if self.local.exists()
+                else None
+            )
+
+            remote = (
+                self.remote.load()
+                if self.remote.exists()
+                else None
+            )
+
+            action = ConflictResolver.resolve(
+                local_vault=local,
+                remote_vault=remote,
+            )
+
+            if action == ConflictResolution.UPLOAD_LOCAL:
+
+                self.remote.save(local)
+
+                print("Uploaded local vault.")
+
                 return True
 
-            if remote_exists and not local_exists:
-                self.download()
-                print("Sync Download Complete")
+            if action == ConflictResolution.DOWNLOAD_REMOTE:
+
+                self.local.save(remote)
+
+                print("Downloaded remote vault.")
+
                 return True
 
-            if local_exists and remote_exists:
-                self.upload()
-                print("Sync Upload Complete")
+            if action == ConflictResolution.NO_ACTION:
+
+                print("Vault already synchronized.")
+
                 return True
 
-            raise FileNotFoundError("No vault found.")
+            return False
+
         except Exception as e:
+
             print(f"Sync failed: {e}")
+
             return False
