@@ -20,7 +20,7 @@ class DetailView(Static):
     def render(self) -> str:
         lines = []
         if isinstance(self._item, Entry):
-            lines.append(f"[white]{self._item.site.name}[/white]")
+            lines.append(f"[white]{self._item.site.name}[/white]\n")
             
             lines.append(f"[gray]URL:[/gray] {self._item.site.url}")
                         
