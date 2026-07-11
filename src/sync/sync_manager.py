@@ -48,24 +48,23 @@ class SyncManager:
         local_exists = self.local.exists()
         remote_exists = self.remote.exists()
 
-        if local_exists and not remote_exists:
+        try:
+            if local_exists and not remote_exists:
+                self.upload()
+                print("Sync Upload Complete")
+                return True
 
-            self.upload()
-            print("Sync Upload Complete")
-            return
+            if remote_exists and not local_exists:
+                self.download()
+                print("Sync Download Complete")
+                return True
 
-        if remote_exists and not local_exists:
+            if local_exists and remote_exists:
+                self.upload()
+                print("Sync Upload Complete")
+                return True
 
-            self.download()
-            print("Sync Download Complete")
-            return
-
-        if local_exists and remote_exists:
-
-            self.upload()
-            print("Sync Upload Complete")
-            return
-
-        raise FileNotFoundError(
-            "No vault found."
-        )
+            raise FileNotFoundError("No vault found.")
+        except Exception as e:
+            print(f"Sync failed: {e}")
+            return False

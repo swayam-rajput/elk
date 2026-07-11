@@ -6,7 +6,7 @@ from cryptography.exceptions import InvalidTag
 from models.entry import Entry
 from models.email import Email
 
-from datetime import datetime
+from datetime import datetime, UTC
 
 from models.vault import Vault
 from models.enc_vault import (
@@ -34,7 +34,8 @@ class VaultService:
         self._key: bytes | None = None
         self._salt: bytes | None = None
         self._dirty: bool = False
-        self._last_saved_hash: str | None = None
+        self._local_hash: str | None = None
+        self._remote_hash: str | None = None
         self._needs_sync: bool = False
 
     @property
@@ -53,6 +54,10 @@ class VaultService:
         self._vault = None
         self._key = None
         self._salt = None
+    
+    def _calculate_hash(self, plaintext: bytes) -> str:
+        return hashlib.sha256(plaintext).hexdigest()
+
     def create_vault(self, master_password: str):
 
         self._vault = Vault()
@@ -66,7 +71,6 @@ class VaultService:
         )
 
         plaintext = VaultSerializer.serialize(self._vault)
-        self._last_saved_hash = hashlib.sha256(plaintext).hexdigest()
 
         nonce = RandomGenerator.generate_nonce()
 
@@ -90,10 +94,11 @@ class VaultService:
                 nonce=Encoding.bytes_to_base64(nonce),
             ),
             ciphertext=Encoding.bytes_to_base64(ciphertext),
-            updated_at=datetime.now().isoformat(),
+            updated_at=datetime.now(UTC).isoformat(),
         )
 
         self.storage.save(encrypted_vault)
+        self._local_hash = self._calculate_hash(plaintext)
         self._needs_sync = True
 
 
@@ -129,10 +134,12 @@ class VaultService:
             self.lock()
             raise ValueError("Invalid master password.")
 
+        self._local_hash = self._calculate_hash(plaintext)
+        self._remote_hash = self._local_hash
+        
         self._vault = VaultSerializer.deserialize(
             plaintext
         )
-        self._last_saved_hash = hashlib.sha256(plaintext).hexdigest()
     
     def save(self) -> bool:
         if not self._dirty:
@@ -151,13 +158,10 @@ class VaultService:
             self._vault
         )
         
-        current_hash = hashlib.sha256(plaintext).hexdigest()
-        if current_hash == self._last_saved_hash:
+        current_hash = self._calculate_hash(plaintext)
+        if current_hash == self._local_hash:
             self._dirty = False
-            self._needs_sync = False
             return False
-            
-        self._last_saved_hash = current_hash
 
         nonce = RandomGenerator.generate_nonce()
 
@@ -182,10 +186,11 @@ class VaultService:
                 nonce=Encoding.bytes_to_base64(nonce),
             ),
             ciphertext=Encoding.bytes_to_base64(ciphertext),
-            updated_at=datetime.now().isoformat(),
+            updated_at=datetime.now(UTC).isoformat(),
         )
 
         self.storage.save(encrypted_vault)
+        self._local_hash = current_hash
         self._dirty = False
         self._needs_sync = True
         return True
@@ -196,8 +201,10 @@ class VaultService:
         if self.sync_manager is None:
             raise ValueError("Sync manager not found.")
 
-        self.sync_manager.sync()
-        self._needs_sync = False
+        success = self.sync_manager.sync()
+        if success:
+            self._remote_hash = self._local_hash
+            self._needs_sync = False
 
 
     def get_entries(self) -> list[Entry]:
