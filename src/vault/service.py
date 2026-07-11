@@ -1,5 +1,6 @@
 from dataclasses import asdict
 import json
+import hashlib
 from cryptography.exceptions import InvalidTag
 
 from models.entry import Entry
@@ -33,6 +34,8 @@ class VaultService:
         self._key: bytes | None = None
         self._salt: bytes | None = None
         self._dirty: bool = False
+        self._last_saved_hash: str | None = None
+        self._needs_sync: bool = False
 
     @property
     def dirty(self) -> bool:
@@ -63,6 +66,7 @@ class VaultService:
         )
 
         plaintext = VaultSerializer.serialize(self._vault)
+        self._last_saved_hash = hashlib.sha256(plaintext).hexdigest()
 
         nonce = RandomGenerator.generate_nonce()
 
@@ -90,6 +94,7 @@ class VaultService:
         )
 
         self.storage.save(encrypted_vault)
+        self._needs_sync = True
 
 
     def unlock_vault(self, master_password: str):
@@ -127,10 +132,11 @@ class VaultService:
         self._vault = VaultSerializer.deserialize(
             plaintext
         )
+        self._last_saved_hash = hashlib.sha256(plaintext).hexdigest()
     
-    def save(self):
+    def save(self) -> bool:
         if not self._dirty:
-            return
+            return False
 
         if self._vault is None:
             raise ValueError("Vault is locked.")
@@ -144,6 +150,14 @@ class VaultService:
         plaintext = VaultSerializer.serialize(
             self._vault
         )
+        
+        current_hash = hashlib.sha256(plaintext).hexdigest()
+        if current_hash == self._last_saved_hash:
+            self._dirty = False
+            self._needs_sync = False
+            return False
+            
+        self._last_saved_hash = current_hash
 
         nonce = RandomGenerator.generate_nonce()
 
@@ -173,12 +187,17 @@ class VaultService:
 
         self.storage.save(encrypted_vault)
         self._dirty = False
+        self._needs_sync = True
+        return True
     
     def sync(self):
+        if not self._needs_sync:
+            return
         if self.sync_manager is None:
             raise ValueError("Sync manager not found.")
 
         self.sync_manager.sync()
+        self._needs_sync = False
 
 
     def get_entries(self) -> list[Entry]:
