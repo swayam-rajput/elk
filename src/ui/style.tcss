@@ -82,7 +82,7 @@ ScrollableList {
 
 /* DetailPanel on the right */
 DetailPanel {
-    width: 45%;
+    width: 100%;
     padding: 0 4;
     background: transparent;
 }
