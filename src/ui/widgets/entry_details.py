@@ -77,7 +77,7 @@ class EditForm(Vertical):
             self._email_select = Select(
                 options=[
                     (
-                        f"{email.address} ({email.label})",
+                        f"{email.address}",
                         email.address,
                     )
                     for email in self._emails
