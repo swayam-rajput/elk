@@ -356,3 +356,29 @@ class VaultService:
                     entry.email_id = email.address
 
         self._dirty = True
+
+    def export_backup(self, destination: str) -> str:
+        from pathlib import Path
+        from storage.backup import BackupManager
+        
+        if not isinstance(self.storage, LocalStorage):
+            raise ValueError("Export is only supported for local storage")
+
+        BackupManager.export_vault(self.storage.vault_path, destination)
+        return destination
+    
+    def import_vault(self, source: str):
+        from pathlib import Path
+        from storage.backup import BackupManager
+
+        if not isinstance(self.storage, LocalStorage):
+            raise ValueError(
+                "Import is only supported for local storage."
+            )
+
+        BackupManager.import_vault(
+            source=Path(source),
+            destination=self.storage.vault_path,
+        )
+
+        self.lock()
