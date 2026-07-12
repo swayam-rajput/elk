@@ -11,7 +11,7 @@ class SettingsManager:
         self._settings = Settings()
 
     @property
-    def current(self) -> Settings:
+    def settings(self) -> Settings:
         return self._settings
 
     def load(self) -> Settings:
