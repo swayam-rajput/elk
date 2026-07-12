@@ -21,46 +21,49 @@ def save_encrypted_vault(storage: LocalStorage, vault: EncryptedVault) -> None:
             indent=4
         )
 
+from config.settings_manager import SettingsManager
+import requests
+
 def main():
-
     storage = LocalStorage()
-    from config import Config
+    settings_manager = SettingsManager()
+    settings = settings_manager.load()
     
-    github = GitHubStorage(Config.GITHUB_USERNAME, Config.GITHUB_REPO, Config.GITHUB_TOKEN)
-
-    sync_man = SyncManager(storage, github)
-    
-    service = VaultService(storage, sync_man)
+    service = VaultService(storage)
 
     if not storage.exists():
-
-        master_password = input(
-            "Create Master Password: "
-        )
+        while True:
+            master_password = input("Create Master Password: ")
+            confirm = input("Confirm Master Password: ")
+            if master_password == confirm:
+                break
+            print("Passwords do not match. Please try again.")
 
         service.create_vault(master_password)
-
+        
     else:
-
-        master_password = input(
-            "Master Password: "
-        )
-
+        master_password = input("Master Password: ")
         try:
             service.unlock_vault(master_password)
-
         except ValueError as e:
             print(e)
             return
 
-    app = PasswordManager(service)
+    if settings.github_enabled:
+        token = service.decrypt_token(settings.github_token)
+        github = GitHubStorage(settings.github_username, settings.github_repository, token)
+        sync_man = SyncManager(storage, github)
+        service.sync_manager = sync_man
+
+    app = PasswordManager(service, settings_manager)
     
     app.run()
     
     if service.dirty:
         print("Changes Detected")
         service.save()
-        service.sync()
+        if settings.auto_sync:
+            service.sync()
     else:
         print("No Changes Detected")
 
