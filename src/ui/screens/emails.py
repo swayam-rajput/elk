@@ -21,9 +21,10 @@ class EmailsScreen(Screen):
         ("escape", "cancel_edit", "Cancel"),
     ]
 
-    def __init__(self, service: VaultService):
+    def __init__(self, service: VaultService, settings_manager=None):
         super().__init__()
         self.service = service
+        self.settings_manager = settings_manager
         self._selected_email: Email | None = None
         self._editing = False
         self._adding = False
