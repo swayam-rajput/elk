@@ -195,16 +195,40 @@ class VaultService:
         self._needs_sync = True
         return True
     
-    def sync(self):
+    def sync(self) -> bool:
         if not self._needs_sync:
-            return
+            return False
         if self.sync_manager is None:
-            raise ValueError("Sync manager not found.")
+            return False
 
         success = self.sync_manager.sync()
         if success:
             self._remote_hash = self._local_hash
             self._needs_sync = False
+        return success
+        
+    def encrypt_token(self, token: str) -> str:
+        if self._key is None:
+            raise ValueError("Vault is locked.")
+        nonce = RandomGenerator.generate_nonce()
+        ciphertext = AESManager.encrypt(token.encode('utf-8'), self._key, nonce)
+        return Encoding.bytes_to_base64(nonce) + ":" + Encoding.bytes_to_base64(ciphertext)
+
+    def decrypt_token(self, encrypted_token: str) -> str:
+        if self._key is None:
+            raise ValueError("Vault is locked.")
+        if not encrypted_token:
+            return ""
+        parts = encrypted_token.split(":")
+        if len(parts) != 2:
+            raise ValueError("Invalid encrypted token format.")
+        nonce = Encoding.base64_to_bytes(parts[0])
+        ciphertext = Encoding.base64_to_bytes(parts[1])
+        try:
+            plaintext = AESManager.decrypt(ciphertext, self._key, nonce)
+            return plaintext.decode('utf-8')
+        except InvalidTag:
+            raise ValueError("Failed to decrypt token.")
 
 
     def get_entries(self) -> list[Entry]:
