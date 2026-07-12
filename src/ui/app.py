@@ -4,6 +4,8 @@ from vault.service import VaultService
 from ui.screens.passwords import PasswordsScreen
 
 
+from config.settings_manager import SettingsManager
+
 class PasswordManager(App):
 
     CSS_PATH = "style.tcss"
@@ -15,12 +17,13 @@ class PasswordManager(App):
         Binding("3", "tab_settings", "Settings", show=False),
     ]
 
-    def __init__(self, service: VaultService):
+    def __init__(self, service: VaultService, settings_manager: SettingsManager):
         super().__init__()
         self.service = service
+        self.settings_manager = settings_manager
 
     def on_mount(self):
-        self.push_screen(PasswordsScreen(self.service))
+        self.push_screen(PasswordsScreen(self.service, self.settings_manager))
 
     def action_tab_passwords(self):
         self._switch_to(PasswordsScreen)
@@ -37,4 +40,4 @@ class PasswordManager(App):
 
     def _switch_to(self, screen_class):
         self.pop_screen()
-        self.push_screen(screen_class(self.service))
+        self.push_screen(screen_class(self.service, self.settings_manager))

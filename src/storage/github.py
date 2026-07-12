@@ -115,3 +115,10 @@ class GitHubStorage(StorageProvider):
         raise NotImplementedError(
             "Delete not implemented."
         )
+    def authenticate(self) -> bool:
+        response = requests.get(
+            "https://api.github.com/user",
+            headers=self.headers,
+        )
+
+        return response.status_code == 200
