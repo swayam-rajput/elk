@@ -182,7 +182,6 @@ class EditForm(Vertical):
             inputs.first().focus()
 
     def collect(self) -> dict:
-        # print(self._email_select.value)
         if isinstance(self._item, Entry):
             return {
                 "id": self._item.id,
@@ -204,55 +203,27 @@ class EditForm(Vertical):
             match self._item.editor:
 
                 case "number":
-
-                    yield Static(f"[b]{self._item.label}[/b]")
-                    yield Static(self._item.description)
-                    yield Static()
-
-                    self._value_input = Input(
-                        value=str(self._item.value),
-                        placeholder="New Value",
-                    )
-
-                    yield self._value_input
-
-                    yield Static()
-                    yield Static("[dim]Ctrl+S Save    Esc Cancel[/dim]")
+                    
+                    return {
+                        "key": self._item.key,
+                        "value": int(self._value_input.value),
+                    }
 
                 case "export":
 
-                    yield Static("[b]Export Encrypted Vault[/b]")
-                    yield Static(
-                        "Export a copy of your encrypted vault.\n"
-                        "The exported file remains encrypted."
-                    )
-                    yield Static()
-
-                    self._destination_input = Input(
-                        placeholder="Destination Folder",
-                    )
-
-                    yield self._destination_input
-
-                    yield Static()
-                    yield Static("[dim]Ctrl+S Export    Esc Cancel[/dim]")
+                    return {
+                        "action": "export",
+                        "destination": self._destination_input.value,
+                    }
 
                 case "import":
 
-                    yield Static("[b]Import Encrypted Vault[/b]")
-                    yield Static(
-                        "[yellow]Warning:[/yellow] This replaces your current vault."
-                    )
-                    yield Static()
+                    return {
+                        "action": "import",
+                        "source": self._source_input.value,
+                    }
 
-                    self._source_input = Input(
-                        placeholder="Path to backup (.vault)",
-                    )
-
-                    yield self._source_input
-
-                    yield Static()
-                    yield Static("[dim]Ctrl+S Import    Esc Cancel[/dim]")
+        return {}
 
 
 class DetailPanel(Vertical):
