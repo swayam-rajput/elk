@@ -11,3 +11,4 @@ vault/*
 .venv
 .env
 vault/encrypted-vault.json
+backup/
