@@ -11,13 +11,14 @@ from ui.widgets.custom_header import CustomHeader
 
 
 class SettingItem:
-    def __init__(self, key: str, label: str, value: int, description: str, editable: bool = True, action: str | None = None):
+    def __init__(self, key: str, label: str, value: int, description: str, editable: bool = True, action: str | None = None, editor: str = 'number'):
         self.key = key
         self.label = label
         self.value = value
         self.description = description
         self.editable = editable
         self.action = action
+        self.editor = editor
 
 
 class SettingsScreen(Screen):
@@ -67,26 +68,7 @@ class SettingsScreen(Screen):
                 callback=lambda _: self._refresh_settings(),
             )
             return
-        if self._selected_item.action == "export_ui":
 
-            from ui.screens.export_ui import ExportVaultScreen
-
-            self.app.push_screen(
-                ExportVaultScreen(self.service)
-            )
-
-            return
-
-
-        if self._selected_item.action == "import_vault":
-
-            from ui.screens.export_ui import ImportVaultScreen
-
-            self.app.push_screen(
-                ImportVaultScreen(self.service)
-            )
-
-            return
         if not self._selected_item.editable:
             return 
         
@@ -98,26 +80,77 @@ class SettingsScreen(Screen):
         detail.show_edit(self._selected_item)
 
     def action_save_setting(self) -> None:
+
         if not self._editing:
             return
+
         detail = self.query_one(DetailPanel)
+
         form = detail.query(EditForm).first()
+
         if not form:
             return
-        data = form.collect()
-        
-        if self.service.vault and self.service.vault.settings:
-            try:
-                val = int(data["value"])
-                setattr(self.service.vault.settings, data["key"], val)
-                self.service._dirty = True
-            except ValueError:
-                pass
-                
-        self._editing = False
-        self._refresh_settings()
-        self.query_one(ScrollableList).focus()
 
+        data = form.collect()
+
+        try:
+
+            match self._selected_item.editor:
+
+                case "number":
+
+                    if self.service.vault is None:
+                        return
+
+                    value = int(data["value"])
+
+                    setattr(
+                        self.service.vault.settings,
+                        data["key"],
+                        value,
+                    )
+
+                    self.service._dirty = True
+                    self.service.save()
+
+                case "export":
+
+                    self.service.export_backup(
+                        data["destination"],
+                    )
+
+                    self.notify(
+                        "Vault exported successfully.",
+                    )
+
+                case "import":
+
+                    self.service.import_vault(
+                        data["source"],
+                    )
+
+                    self.notify(
+                        "Vault imported successfully.\nPlease unlock again.",
+                    )
+
+                    self.app.pop_screen()
+
+        except Exception as e:
+            print(e)
+            self.notify(
+                str(e),
+                severity="error",
+            )
+
+            return
+
+        self._editing = False
+
+        self._refresh_settings()
+
+        self.query_one(
+            ScrollableList,
+        ).focus()
     def action_cancel_edit(self) -> None:
         if not self._editing:
             return
@@ -173,8 +206,9 @@ How to Personal Access Token
                 label="Export Encrypted Vault",
                 value='',
                 description="Export the encrypted vault.",
-                editable=False,
-                action="export_ui",
+                # editable=False,
+                
+                editor="export",
             ),
 
             SettingItem(
@@ -182,14 +216,16 @@ How to Personal Access Token
                 label="Import Encrypted Vault",
                 value="",
                 description="Replace the current vault with another encrypted vault.",
-                editable=False,
-                action="import_vault",
+                # editable=False,
+                
+                editor="import",
             ),
             SettingItem(
                 key="clipboard_timeout",
                 label="Clipboard Timeout",
                 value=clipboard_val,
                 description="[#B0B4BF]Number of seconds before the copied password is cleared from the clipboard[/]."
+
             ),
             SettingItem(
                 key="auto_lock_minutes",

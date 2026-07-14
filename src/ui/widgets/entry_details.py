@@ -50,10 +50,35 @@ class DetailView(Static):
             if self._item.label:
                 lines.append(f"[gray]Label:[/gray] {self._item.label}")
         elif type(self._item).__name__ == "SettingItem":
-            lines.append(f"[white]{self._item.label}[/white]")
-            lines.append(f"[gray]Value:[/gray] {self._item.value}")
-            lines.append(f"[gray]Description: {self._item.description}[/]")
-            
+
+            match self._item.editor:
+
+                case "number":
+
+                    lines.append(f"[white]{self._item.label}[/white]\n")
+                    lines.append(f"[gray]Current:[/] {self._item.value}\n")
+                    lines.append(self._item.description)
+                    lines.append("\n\nPress [b]E[/b] to edit.")
+
+                case "export":
+
+                    lines.append("[white]Export Encrypted Vault[/white]\n")
+                    lines.append(
+                        "Create an encrypted backup of your vault.\n"
+                    )
+                    lines.append(
+                        "\nPress [b]E[/b] to choose a destination."
+                    )
+
+                case "import":
+
+                    lines.append("[white]Import Encrypted Vault[/white]\n")
+                    lines.append(
+                        "Replace the current vault with an existing backup.\n"
+                    )
+                    lines.append(
+                        "\nPress [b]E[/b] to select a backup."
+                    )
         return "\n".join(lines)
 
 
@@ -121,10 +146,35 @@ class EditForm(Vertical):
             ):
                 yield inp
         elif type(self._item).__name__ == "SettingItem":
-            self._value_input = Input(
-                value=str(self._item.value), placeholder="New Value"
-            )
-            yield self._value_input
+            from pathlib import Path
+            match self._item.editor:
+                case "number":
+
+                    self._value_input = Input(
+                        value=str(self._item.value),
+                        placeholder="New Value",
+                    )
+
+                    yield self._value_input
+
+                case "export":
+
+                    self._destination_input = Input(
+                        placeholder="Destination Folder",
+                        value=str(Path.cwd() / "backup/elk-backup.vault"),
+                        id='destination'
+                    )
+
+                    yield self._destination_input
+
+                case "import":
+
+                    self._source_input = Input(
+                        placeholder="Backup File",
+                    )
+
+                    yield self._source_input
+
 
     def on_mount(self) -> None:
         inputs = self.query(Input)
@@ -150,10 +200,59 @@ class EditForm(Vertical):
                 "label": self._label_input.value,
             }
         elif type(self._item).__name__ == "SettingItem":
-            return {
-                "key": self._item.key,
-                "value": self._value_input.value,
-            }
+            
+            match self._item.editor:
+
+                case "number":
+
+                    yield Static(f"[b]{self._item.label}[/b]")
+                    yield Static(self._item.description)
+                    yield Static()
+
+                    self._value_input = Input(
+                        value=str(self._item.value),
+                        placeholder="New Value",
+                    )
+
+                    yield self._value_input
+
+                    yield Static()
+                    yield Static("[dim]Ctrl+S Save    Esc Cancel[/dim]")
+
+                case "export":
+
+                    yield Static("[b]Export Encrypted Vault[/b]")
+                    yield Static(
+                        "Export a copy of your encrypted vault.\n"
+                        "The exported file remains encrypted."
+                    )
+                    yield Static()
+
+                    self._destination_input = Input(
+                        placeholder="Destination Folder",
+                    )
+
+                    yield self._destination_input
+
+                    yield Static()
+                    yield Static("[dim]Ctrl+S Export    Esc Cancel[/dim]")
+
+                case "import":
+
+                    yield Static("[b]Import Encrypted Vault[/b]")
+                    yield Static(
+                        "[yellow]Warning:[/yellow] This replaces your current vault."
+                    )
+                    yield Static()
+
+                    self._source_input = Input(
+                        placeholder="Path to backup (.vault)",
+                    )
+
+                    yield self._source_input
+
+                    yield Static()
+                    yield Static("[dim]Ctrl+S Import    Esc Cancel[/dim]")
 
 
 class DetailPanel(Vertical):
