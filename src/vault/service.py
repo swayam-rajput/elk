@@ -364,7 +364,7 @@ class VaultService:
         if not isinstance(self.storage, LocalStorage):
             raise ValueError("Export is only supported for local storage")
 
-        BackupManager.export_vault(self.storage.vault_path, destination)
+        BackupManager.export_vault(Path(self.storage.vault_path), Path(destination))
         return destination
     
     def import_vault(self, source: str):
