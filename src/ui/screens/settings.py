@@ -67,6 +67,26 @@ class SettingsScreen(Screen):
                 callback=lambda _: self._refresh_settings(),
             )
             return
+        if self._selected_item.action == "export_ui":
+
+            from ui.screens.export_ui import ExportVaultScreen
+
+            self.app.push_screen(
+                ExportVaultScreen(self.service)
+            )
+
+            return
+
+
+        if self._selected_item.action == "import_vault":
+
+            from ui.screens.export_ui import ImportVaultScreen
+
+            self.app.push_screen(
+                ImportVaultScreen(self.service)
+            )
+
+            return
         if not self._selected_item.editable:
             return 
         
@@ -117,6 +137,7 @@ class SettingsScreen(Screen):
             if self.settings_manager
             else False
         )
+        
 
         github_status = (
             "[#42AA22]Enabled [/]"
@@ -146,6 +167,23 @@ How to Personal Access Token
                 description="\n[#B0B4BF]Configure cloud synchronization.\nChanges are synced when you close the app"+TOKEN_DESC+' [/]',
                 editable=False,
                 action="github_setup",
+            ),
+            SettingItem(
+                key="export_vault",
+                label="Export Encrypted Vault",
+                value='',
+                description="Export the encrypted vault.",
+                editable=False,
+                action="export_ui",
+            ),
+
+            SettingItem(
+                key="import_vault",
+                label="Import Encrypted Vault",
+                value="",
+                description="Replace the current vault with another encrypted vault.",
+                editable=False,
+                action="import_vault",
             ),
             SettingItem(
                 key="clipboard_timeout",
