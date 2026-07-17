@@ -79,6 +79,20 @@ class DetailView(Static):
                     lines.append(
                         "\nPress [b]E[/b] to select a backup."
                     )
+
+                case "github_sync":
+
+                    lines.append(f"[white]{self._item.label}[/white]\n")
+                    lines.append(f"[gray]Current:[/] {self._item.value}\n")
+                    lines.append(self._item.description)
+                    lines.append("\n\nPress [b]E[/b] to configure.")
+
+                case "change_master_password":
+
+                    lines.append(f"[white]{self._item.label}[/white]\n")
+                    lines.append(self._item.description)
+                    lines.append("\n\nPress [b]E[/b] to change.")
+
         return "\n".join(lines)
 
 
@@ -175,6 +189,54 @@ class EditForm(Vertical):
 
                     yield self._source_input
 
+                case "github_sync":
+
+                    settings = self.app.settings_manager.settings
+                    self._github_username_input = Input(
+                        value=settings.github_username or "",
+                        placeholder="GitHub Username",
+                    )
+                    self._github_repository_input = Input(
+                        value=settings.github_repository or "",
+                        placeholder="Repository",
+                    )
+
+                    existing_token = ""
+                    if settings.github_enabled and settings.github_token:
+                        try:
+                            existing_token = self.app.service.decrypt_token(settings.github_token)
+                        except Exception:
+                            pass
+
+                    self._github_token_input = Input(
+                        value=existing_token,
+                        placeholder="Personal Access Token",
+                        password=True,
+                    )
+
+                    yield self._github_username_input
+                    yield self._github_repository_input
+                    yield self._github_token_input
+
+                case "change_master_password":
+
+                    self._current_password_input = Input(
+                        placeholder="Current Master Password",
+                        password=True,
+                    )
+                    self._new_password_input = Input(
+                        placeholder="New Master Password",
+                        password=True,
+                    )
+                    self._confirm_password_input = Input(
+                        placeholder="Confirm New Master Password",
+                        password=True,
+                    )
+
+                    yield self._current_password_input
+                    yield self._new_password_input
+                    yield self._confirm_password_input
+
 
     def on_mount(self) -> None:
         inputs = self.query(Input)
@@ -221,6 +283,24 @@ class EditForm(Vertical):
                     return {
                         "action": "import",
                         "source": self._source_input.value,
+                    }
+
+                case "github_sync":
+
+                    return {
+                        "action": "github_sync",
+                        "username": self._github_username_input.value.strip(),
+                        "repository": self._github_repository_input.value.strip(),
+                        "token": self._github_token_input.value.strip(),
+                    }
+
+                case "change_master_password":
+
+                    return {
+                        "action": "change_master_password",
+                        "current_password": self._current_password_input.value,
+                        "new_password": self._new_password_input.value,
+                        "confirm_password": self._confirm_password_input.value,
                     }
 
         return {}

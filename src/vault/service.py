@@ -102,6 +102,70 @@ class VaultService:
         self._needs_sync = True
 
 
+    def change_master_password(self, current_password: str, new_password: str, encrypted_token: str = "") -> str:
+        """
+        Changes the master password of the vault.
+        If encrypted_token is provided, decrypts it with the old key,
+        re-encrypts it with the new key, and returns the new encrypted token.
+        """
+        if self._vault is None or self._key is None or self._salt is None:
+            raise ValueError("Vault is locked.")
+
+        # Verify current password
+        deriver = Argon2KeyDeriver()
+        verify_key = deriver.derive_key(current_password, self._salt)
+        if verify_key != self._key:
+            raise ValueError("Incorrect current master password.")
+
+        # Decrypt token with old key
+        decrypted_token = ""
+        if encrypted_token:
+            decrypted_token = self.decrypt_token(encrypted_token)
+
+        # Derive new key and salt
+        new_salt = RandomGenerator.generate_salt()
+        new_key = deriver.derive_key(new_password, new_salt)
+
+        # Update service keys
+        self._salt = new_salt
+        self._key = new_key
+        
+        # We need to force vault rewrite using the new key
+        plaintext = VaultSerializer.serialize(self._vault)
+        nonce = RandomGenerator.generate_nonce()
+        ciphertext = AESManager.encrypt(
+            plaintext,
+            self._key,
+            nonce,
+        )
+        encrypted_vault = EncryptedVault(
+            version=1,
+            kdf=KDFMetadata(
+                algorithm="argon2id",
+                memory=deriver.config.memory_cost,
+                iterations=deriver.config.time_cost,
+                parallelism=deriver.config.parallelism,
+                salt=Encoding.bytes_to_base64(self._salt),
+            ),
+            encryption=EncryptionMetadata(
+                algorithm="aes-256-gcm",
+                nonce=Encoding.bytes_to_base64(nonce),
+            ),
+            ciphertext=Encoding.bytes_to_base64(ciphertext),
+            updated_at=datetime.now(UTC).isoformat(),
+        )
+        self.storage.save(encrypted_vault)
+        self._local_hash = self._calculate_hash(plaintext)
+        self._needs_sync = True
+
+        # Re-encrypt token with new key
+        new_encrypted_token = ""
+        if decrypted_token:
+            new_encrypted_token = self.encrypt_token(decrypted_token)
+
+        return new_encrypted_token
+
+
     def unlock_vault(self, master_password: str):
 
         encrypted_vault = self.storage.load()

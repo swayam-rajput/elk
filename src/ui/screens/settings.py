@@ -37,7 +37,7 @@ class SettingsScreen(Screen):
         self._editing = False
 
     def compose(self) -> ComposeResult:
-        yield CustomHeader(active_tab=3, item_count=2, item_type="settings")
+        yield CustomHeader(active_tab=3, item_count=6, item_type="settings")
         with Horizontal(id="main-layout"):
             yield ScrollableList(id="entry-list")
             yield DetailPanel(id="entry-details")
@@ -56,24 +56,9 @@ class SettingsScreen(Screen):
     def action_edit_setting(self) -> None:
         if self._selected_item is None or self._editing:
             return
-        
-        if self._selected_item.action == 'github_setup':
-            from ui.screens.github_setup import GitHubSetupScreen
-
-            self.app.push_screen(
-                GitHubSetupScreen(
-                    self.service,
-                    self.settings_manager
-                ),
-                callback=lambda _: self._refresh_settings(),
-            )
-            return
 
         if not self._selected_item.editable:
             return 
-        
-        if self._editing:
-            return
         
         self._editing = True
         detail = self.query_one(DetailPanel)
@@ -134,6 +119,65 @@ class SettingsScreen(Screen):
                     )
 
                     self.app.pop_screen()
+
+                case "github_sync":
+                    username = data["username"]
+                    repository = data["repository"]
+                    token = data["token"]
+
+                    if not username or not repository or not token:
+                        raise ValueError("Please complete every field.")
+
+                    from storage.github import GitHubStorage
+                    github = GitHubStorage(
+                        username=username,
+                        repository=repository,
+                        token=token
+                    )
+                    if not github.authenticate():
+                        raise ValueError("GitHub authentication failed.")
+
+                    settings = self.settings_manager.settings
+                    settings.github_enabled = True
+                    settings.github_username = username
+                    settings.github_repository = repository
+                    settings.github_token = self.service.encrypt_token(token)
+
+                    self.settings_manager.save()
+
+                    # Update active storage / sync manager on the service
+                    from storage.local import LocalStorage
+                    from sync.sync_manager import SyncManager
+                    sync_man = SyncManager(LocalStorage(), github)
+                    self.service.sync_manager = sync_man
+
+                    self.notify("GitHub Sync configured successfully.")
+
+                case "change_master_password":
+                    current_pw = data["current_password"]
+                    new_pw = data["new_password"]
+                    confirm_pw = data["confirm_password"]
+
+                    if not current_pw or not new_pw or not confirm_pw:
+                        raise ValueError("Please fill out all fields.")
+
+                    if new_pw != confirm_pw:
+                        raise ValueError("New passwords do not match.")
+
+                    settings = self.settings_manager.settings
+                    old_encrypted_token = settings.github_token if settings.github_enabled else ""
+
+                    new_encrypted_token = self.service.change_master_password(
+                        current_pw,
+                        new_pw,
+                        old_encrypted_token
+                    )
+
+                    if settings.github_enabled and new_encrypted_token:
+                        settings.github_token = new_encrypted_token
+                        self.settings_manager.save()
+
+                    self.notify("Master password updated successfully.")
 
         except Exception as e:
             print(e)
@@ -198,8 +242,16 @@ How to Personal Access Token
                 label="GitHub Sync",
                 value=github_status,
                 description="\n[#B0B4BF]Configure cloud synchronization.\nChanges are synced when you close the app"+TOKEN_DESC+' [/]',
-                editable=False,
-                action="github_setup",
+                editable=True,
+                editor="github_sync",
+            ),
+            SettingItem(
+                key="change_master_password",
+                label="Change Master Password",
+                value="",
+                description="\n[#B0B4BF]Change the master password used to lock/unlock your vault. This will re-encrypt your entire database and any configured cloud keys with the new password.[/]",
+                editable=True,
+                editor="change_master_password",
             ),
             SettingItem(
                 key="export_vault",
