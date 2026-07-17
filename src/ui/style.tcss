@@ -204,3 +204,23 @@ CustomHeader {
 .-hidden {
     display: none;
 }
+
+/* Style Toast notifications */
+Toast {
+    background: #333333;
+    color: white;
+    border: none;
+    padding: 0 1;
+}
+
+Toast.-information {
+    border-left: solid #879792;
+}
+
+Toast.-warning {
+    border-left: solid #ffaa00;
+}
+
+Toast.-error {
+    border-left: solid #b54044;
+}
