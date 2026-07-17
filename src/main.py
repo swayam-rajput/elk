@@ -60,7 +60,7 @@ def main():
     app.run()
     
     if service.dirty:
-        print("Changes Detected")
+        print("Changes Detected\nSyncing...")
         service.save()
         if settings.auto_sync:
             service.sync()
