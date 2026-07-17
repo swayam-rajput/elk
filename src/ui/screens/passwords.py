@@ -131,15 +131,27 @@ class PasswordsScreen(Screen):
     def action_delete_entry(self) -> None:
         if self._selected_entry is None or self._editing:
             return
-        entry_id = self._selected_entry.id
-        self.service.delete_entry(entry_id)
 
-        self._selected_entry = None
-        self._editing = False
-        self._adding = False
-        self._refresh_entries()
-        detail = self.query_one(DetailPanel)
-        detail.remove_children()
+        from ui.screens.confirm_delete import ConfirmDeleteScreen
+
+        entry = self._selected_entry
+        message = f"Delete entry [#D16666]{entry.site.name}[/]? Press [orange][b]d[/][/] again to confirm or [orange][b]esc[/][/] to cancel"
+
+        def handle_confirm(confirmed: bool) -> None:
+            if confirmed:
+                self.service.delete_entry(entry.id)
+                self._selected_entry = None
+                self._editing = False
+                self._adding = False
+                self._refresh_entries()
+                detail = self.query_one(DetailPanel)
+                detail.remove_children()
+                self.notify("Password entry deleted.")
+
+        self.app.push_screen(
+            ConfirmDeleteScreen(message),
+            callback=handle_confirm
+        )
 
     def action_edit_entry(self) -> None:
         if self._selected_entry is None or self._editing:

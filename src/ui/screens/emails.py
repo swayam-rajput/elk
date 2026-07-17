@@ -67,19 +67,30 @@ class EmailsScreen(Screen):
     def action_delete_email(self) -> None:
         if self._selected_email is None or self._editing:
             return
-        email_id = self._selected_email.id
-        try:
-            self.service.delete_email(email_id)
-        except ValueError as e:
-            self.app.notify(str(e), severity="error")
-            return
-            
-        self._selected_email = None
-        self._editing = False
-        self._adding = False
-        self._refresh_emails()
-        detail = self.query_one(DetailPanel)
-        detail.remove_children()
+
+        from ui.screens.confirm_delete import ConfirmDeleteScreen
+
+        email = self._selected_email
+        message = f"Delete email [#D16666]{email.address}[/]? Press [orange][b]d[/][/] again to confirm or [orange][b]esc[/][/] to cancel"
+
+        def handle_confirm(confirmed: bool) -> None:
+            if confirmed:
+                try:
+                    self.service.delete_email(email.id)
+                    self._selected_email = None
+                    self._editing = False
+                    self._adding = False
+                    self._refresh_emails()
+                    detail = self.query_one(DetailPanel)
+                    detail.remove_children()
+                    self.notify("Email account deleted.")
+                except ValueError as e:
+                    self.notify(str(e), severity="error")
+
+        self.app.push_screen(
+            ConfirmDeleteScreen(message),
+            callback=handle_confirm
+        )
 
     def action_edit_email(self) -> None:
         if self._selected_email is None or self._editing:
