@@ -43,7 +43,7 @@ class SyncManager:
 
                 self.remote.save(local)
 
-                print("Uploaded local vault.")
+                print("Uploaded local vault to the remote location.\nChanges synced")
 
                 return True
 
