@@ -54,9 +54,61 @@ class VaultService:
         self._vault = None
         self._key = None
         self._salt = None
-    
+
+    def _require_unlocked(self) -> Vault:
+        if self._vault is None:
+            raise ValueError("Vault is locked.")
+
+        return self._vault
+
+
+    def _require_key(self) -> bytes:
+        if self._key is None:
+            raise ValueError("Vault key not found.")
+
+        return self._key
+
+
+    def _require_salt(self) -> bytes:
+        if self._salt is None:
+            raise ValueError("Vault salt not found.")
+
+        return self._salt
+
     def _calculate_hash(self, plaintext: bytes) -> str:
         return hashlib.sha256(plaintext).hexdigest()
+
+    def _build_encrypted_vault(self, plaintext: bytes) -> EncryptedVault:
+        key = self._require_key()
+        salt = self._require_salt()
+
+        nonce = RandomGenerator.generate_nonce()
+        ciphertext = AESManager.encrypt(
+            plaintext,
+            key,
+            nonce,
+        )
+
+        deriver = Argon2KeyDeriver()
+
+        return EncryptedVault(
+            version=1,
+            kdf=KDFMetadata(
+                algorithm="argon2id",
+                memory=deriver.config.memory_cost,
+                iterations=deriver.config.time_cost,
+                parallelism=deriver.config.parallelism,
+                salt=Encoding.bytes_to_base64(salt),
+            ),
+            encryption=EncryptionMetadata(
+                algorithm="aes-256-gcm",
+                nonce=Encoding.bytes_to_base64(nonce),
+            ),
+            ciphertext=Encoding.bytes_to_base64(ciphertext),
+            updated_at=datetime.now(UTC).isoformat(),
+        )
+
+# ----------------------------------------------------------------------
 
     def create_vault(self, master_password: str):
 
@@ -72,30 +124,7 @@ class VaultService:
 
         plaintext = VaultSerializer.serialize(self._vault)
 
-        nonce = RandomGenerator.generate_nonce()
-
-        ciphertext = AESManager.encrypt(
-            plaintext,
-            self._key,
-            nonce,
-        )
-
-        encrypted_vault = EncryptedVault(
-            version=1,
-            kdf=KDFMetadata(
-                algorithm="argon2id",
-                memory=deriver.config.memory_cost,
-                iterations=deriver.config.time_cost,
-                parallelism=deriver.config.parallelism,
-                salt=Encoding.bytes_to_base64(self._salt),
-            ),
-            encryption=EncryptionMetadata(
-                algorithm="aes-256-gcm",
-                nonce=Encoding.bytes_to_base64(nonce),
-            ),
-            ciphertext=Encoding.bytes_to_base64(ciphertext),
-            updated_at=datetime.now(UTC).isoformat(),
-        )
+        encrypted_vault = self._build_encrypted_vault(plaintext)
 
         self.storage.save(encrypted_vault)
         self._local_hash = self._calculate_hash(plaintext)
@@ -132,28 +161,9 @@ class VaultService:
         
         # We need to force vault rewrite using the new key
         plaintext = VaultSerializer.serialize(self._vault)
-        nonce = RandomGenerator.generate_nonce()
-        ciphertext = AESManager.encrypt(
-            plaintext,
-            self._key,
-            nonce,
-        )
-        encrypted_vault = EncryptedVault(
-            version=1,
-            kdf=KDFMetadata(
-                algorithm="argon2id",
-                memory=deriver.config.memory_cost,
-                iterations=deriver.config.time_cost,
-                parallelism=deriver.config.parallelism,
-                salt=Encoding.bytes_to_base64(self._salt),
-            ),
-            encryption=EncryptionMetadata(
-                algorithm="aes-256-gcm",
-                nonce=Encoding.bytes_to_base64(nonce),
-            ),
-            ciphertext=Encoding.bytes_to_base64(ciphertext),
-            updated_at=datetime.now(UTC).isoformat(),
-        )
+
+        encrypted_vault = self._build_encrypted_vault(plaintext)
+        
         self.storage.save(encrypted_vault)
         self._local_hash = self._calculate_hash(plaintext)
         self._needs_sync = True
@@ -209,14 +219,11 @@ class VaultService:
         if not self._dirty:
             return False
 
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
 
-        if self._key is None:
-            raise ValueError("Vault key not found.")
+        self._require_key()
 
-        if self._salt is None:
-            raise ValueError("Vault salt not found.")
+        self._require_salt()
 
         plaintext = VaultSerializer.serialize(
             self._vault
@@ -227,32 +234,7 @@ class VaultService:
             self._dirty = False
             return False
 
-        nonce = RandomGenerator.generate_nonce()
-
-        ciphertext = AESManager.encrypt(
-            plaintext,
-            self._key,
-            nonce,
-        )
-
-        deriver = Argon2KeyDeriver()
-        encrypted_vault = EncryptedVault(
-            version=1,
-            kdf=KDFMetadata(
-                algorithm="argon2id",
-                memory=deriver.config.memory_cost,
-                iterations=deriver.config.time_cost,
-                parallelism=deriver.config.parallelism,
-                salt=Encoding.bytes_to_base64(self._salt),
-            ),
-            encryption=EncryptionMetadata(
-                algorithm="aes-256-gcm",
-                nonce=Encoding.bytes_to_base64(nonce),
-            ),
-            ciphertext=Encoding.bytes_to_base64(ciphertext),
-            updated_at=datetime.now(UTC).isoformat(),
-        )
-
+        encrypted_vault = self._build_encrypted_vault(plaintext)
         self.storage.save(encrypted_vault)
         self._local_hash = current_hash
         self._dirty = False
@@ -329,29 +311,26 @@ class VaultService:
         return None
 
     def add_entry(self, entry: Entry):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
         for e in self.get_entries():
             if (
                 e.site.url == entry.site.url
                 and e.email_id == entry.email_id
             ):
                 raise ValueError("An entry for this site and email already exists.")
-        self._vault.entries.append(entry)
+        self.vault.entries.append(entry)
         self._dirty = True
 
 
     def add_email(self, email: Email):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
 
         self._vault.emails.append(email)
         self._dirty = True
 
 
     def update_entry(self, entry: Entry):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
 
         for i, e in enumerate(self._vault.entries):
             if e.id == entry.id:
@@ -363,8 +342,7 @@ class VaultService:
         raise ValueError(f"Entry {entry.id} not found.")
 
     def delete_entry(self, entry_id: str):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
 
         self._vault.entries = [
             entry
@@ -375,8 +353,7 @@ class VaultService:
 
 
     def delete_email(self, email_id: str):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
 
         email_to_delete = None
         for email in self._vault.emails:
@@ -401,8 +378,7 @@ class VaultService:
         self._dirty = True
 
     def update_email(self, email: Email):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
 
         old_address = None
         for i, e in enumerate(self._vault.emails):
