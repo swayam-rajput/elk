@@ -176,7 +176,15 @@ class SettingsScreen(Screen):
                     if settings.github_enabled and new_encrypted_token:
                         settings.github_token = new_encrypted_token
                         self.settings_manager.save()
-
+                        print("Master Password changed, syncing...")
+                        if not self.service.sync():
+                            self.notify(
+                                "Master password changed, but GitHub sync failed.",
+                                severity="warning",
+                            )
+                            return
+                        print("Sync Complete")
+                    
                     self.notify("Master password updated successfully.")
 
         except Exception as e:
