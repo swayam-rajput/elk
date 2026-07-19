@@ -275,6 +275,7 @@ class VaultService:
             return plaintext.decode('utf-8')
         except InvalidTag:
             raise ValueError("Failed to decrypt token.")
+        
 
 
     def get_entries(self) -> list[Entry]:
@@ -422,3 +423,35 @@ class VaultService:
         )
 
         self.lock()
+
+    def search_entries(self, query: str) -> list[Entry]:
+        # use for phone execution as textual library handles search
+        if self._vault is None:
+            raise ValueError("Vault is locked.")
+
+        query = query.strip().lower()
+
+        if not query:
+            return self._vault.entries
+
+        email_lookup = {
+            email.id: email.address.lower()
+            for email in self._vault.emails
+        }
+
+        results: list[Entry] = []
+
+        for entry in self._vault.entries:
+            email = email_lookup.get(entry.email_id, "")
+
+            if (
+                query in entry.site.name.lower()
+                or query in entry.site.url.lower()
+                or query in email
+                or query in (entry.username or "").lower()
+                or query in entry.password.lower()
+                or query in entry.notes.lower()
+            ):
+                results.append(entry)
+
+        return results

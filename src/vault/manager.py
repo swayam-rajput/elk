@@ -41,19 +41,5 @@ class VaultManager:
     
     def list_entries(self) -> list[Entry]:
         return self.vault.entries
-
-    def search_entries(self, query: str) -> list[Entry]:
-        query = query.lower()
-
-        return [
-
-            entry
-
-            for entry in self.vault.entries
-
-            if query in entry.site.name.lower()
-            or query in entry.site.url.lower()
-
-        ]
     
 
