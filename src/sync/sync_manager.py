@@ -3,7 +3,7 @@ from sync.conflicts import (
     ConflictResolver,
     ConflictResolution,
 )
-
+from requests.exceptions import ConnectionError, Timeout, RequestException
 
 class SyncManager:
 
@@ -63,8 +63,18 @@ class SyncManager:
 
             return False
 
+        except ConnectionError:
+            print("Unable to connect to GitHub. Check your internet connection.")
+            return False
+
+        except Timeout:
+            print("Connection to GitHub timed out.")
+            return False
+
+        except RequestException:
+            print("Unable to synchronize with GitHub.")
+            return False
+
         except Exception as e:
-
             print(f"Sync failed: {e}")
-
             return False
