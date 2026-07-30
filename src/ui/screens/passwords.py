@@ -20,6 +20,7 @@ class PasswordsScreen(Screen):
         Binding("e", "edit_entry", "Edit"),
         Binding("p", "reveal_password", "Reveal"),
         Binding("y", "copy_password", "Copy"),
+        Binding("s", "cycle_sort", "Sort"),
         Binding("f", "toggle_search", "Search", priority=True),
         Binding("ctrl+f", "toggle_search", "Search", show=False, priority=True),
         Binding("ctrl+s", "save_entry", "Save"),
@@ -36,6 +37,7 @@ class PasswordsScreen(Screen):
         self._emails = self.service.get_emails()
         self._search_visible = False
         self._search_query = ""
+        self._sort_mode: int = 0  # 0=newest, 1=A→Z, 2=Z→A
 
     def compose(self) -> ComposeResult:
         yield CustomHeader(active_tab=1)
@@ -89,8 +91,16 @@ class PasswordsScreen(Screen):
         if event.input.id == "search-input":
             self.query_one(ScrollableList).focus()
 
+    def action_cycle_sort(self) -> None:
+        if self._editing:
+            return
+        self._sort_mode = (self._sort_mode + 1) % 3
+        labels = ["Newest first", "A \u2192 Z", "Z \u2192 A"]
+        self.notify(f"Sort: {labels[self._sort_mode]}", timeout=1.5)
+        self._refresh_entries()
+
     def _get_filtered_items(self) -> list:
-        entries = self.service.get_entries()
+        entries = self.service.get_entries(self._sort_mode)
         query = self._search_query
         if not query:
             return entries
@@ -118,14 +128,13 @@ class PasswordsScreen(Screen):
         )
         self.service.add_entry(new_entry)
 
-        entries = self.service.get_entries()
+        entries = self.service.get_entries(self._sort_mode)
         new_index = len(entries) - 1
         entry_list = self.query_one(ScrollableList)
         entry_list.load_items(entries, select_index=new_index)
         self._selected_entry = new_entry
         self._editing = True
         self._adding = True
-        detail = self.query_one(DetailPanel)
         detail.show_edit(new_entry, self._emails)
 
     def action_delete_entry(self) -> None:

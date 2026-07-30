@@ -206,7 +206,7 @@ class VaultService:
 
         except InvalidTag:
             self.lock()
-            raise ValueError("Invalid master password.")
+            raise ValueError("Invalid master password.\nPress 'Enter' to exit")
 
         self._local_hash = self._calculate_hash(plaintext)
         self._remote_hash = self._local_hash
@@ -278,11 +278,28 @@ class VaultService:
         
 
 
-    def get_entries(self) -> list[Entry]:
+    def get_entries(self, sort_mode: int = 0) -> list[Entry]:
+        """Return entries sorted by the given mode.
+
+        sort_mode:
+            0 - newest first (updated_at descending)
+            1 - alphabetical (A → Z)
+            2 - reverse alphabetical (Z → A)
+        """
         if self._vault is None:
             return []
 
-        return self._vault.entries
+        entries = list(self._vault.entries)  # shallow copy – don't mutate the vault list
+
+        if sort_mode == 0:
+            entries.sort(key=lambda e: e.updated_at, reverse=True)
+        elif sort_mode == 1:
+            entries.sort(key=lambda e: e.site.name.lower())
+        else:
+            entries.sort(key=lambda e: e.site.name.lower(), reverse=True)
+
+        return entries
+        # return sorted(self._vault.entries, key=lambda e: e.site.name.lower())
 
     def get_entry(self, entry_id: str) -> Entry | None:
         if self._vault is None:
