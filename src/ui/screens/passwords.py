@@ -135,6 +135,7 @@ class PasswordsScreen(Screen):
         self._selected_entry = new_entry
         self._editing = True
         self._adding = True
+        detail = self.query_one(DetailPanel)
         detail.show_edit(new_entry, self._emails)
 
     def action_delete_entry(self) -> None:
