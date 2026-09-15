@@ -126,10 +126,16 @@ class GitHubSetupScreen(ModalScreen):
 
             return
 
+        active_profile = self.app.active_profile
+        if not active_profile:
+            self.notify("No active profile found.", severity="error")
+            return
+
         github = GitHubStorage(
             username=username,
             repository=repository,
             token=token,
+            profile_id=active_profile.id,
         )
 
         if not github.authenticate():

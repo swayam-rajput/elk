@@ -37,7 +37,7 @@ class SettingsScreen(Screen):
         self._editing = False
 
     def compose(self) -> ComposeResult:
-        yield CustomHeader(active_tab=3, item_count=6, item_type="settings")
+        yield CustomHeader(active_tab=3, item_count=7, item_type="settings")
         with Horizontal(id="main-layout"):
             yield ScrollableList(id="entry-list")
             yield DetailPanel(id="entry-details")
@@ -58,8 +58,10 @@ class SettingsScreen(Screen):
             return
 
         if not self._selected_item.editable:
-            return 
-        
+            return
+
+
+
         self._editing = True
         detail = self.query_one(DetailPanel)
         detail.show_edit(self._selected_item)
@@ -128,11 +130,16 @@ class SettingsScreen(Screen):
                     if not username or not repository or not token:
                         raise ValueError("Please complete every field.")
 
+                    active_profile = self.app.active_profile
+                    if active_profile is None:
+                        raise ValueError("No active profile.")
+
                     from storage.github import GitHubStorage
                     github = GitHubStorage(
                         username=username,
                         repository=repository,
-                        token=token
+                        token=token,
+                        profile_id=active_profile.id,
                     )
                     if not github.authenticate():
                         raise ValueError("GitHub authentication failed.")
@@ -148,7 +155,10 @@ class SettingsScreen(Screen):
                     # Update active storage / sync manager on the service
                     from storage.local import LocalStorage
                     from sync.sync_manager import SyncManager
-                    sync_man = SyncManager(LocalStorage(), github)
+                    sync_man = SyncManager(
+                        LocalStorage(active_profile.vault_path),
+                        github,
+                    )
                     self.service.sync_manager = sync_man
 
                     self.notify("GitHub Sync configured successfully.")
@@ -244,6 +254,11 @@ How to Personal Access Token
     • Contents -> Read and Write
 
     5. Paste the token below."""
+        active_profile = self.app.active_profile
+        active_name = active_profile.name if active_profile else "Unknown"
+        default_profile = self.app.profile_manager.get_default_profile()
+        default_name = default_profile.name if default_profile else "None"
+
         self._items = [
             SettingItem(
                 key="github_sync",
@@ -257,9 +272,19 @@ How to Personal Access Token
                 key="change_master_password",
                 label="Change Master Password",
                 value="",
-                description="\n[#B0B4BF]Change the master password used to lock/unlock your vault. This will re-encrypt your entire database and any configured cloud keys with the new password.[/]",
+                description="\nChange the master password used to lock/unlock your vault. This will re-encrypt your entire database and any configured cloud keys with the new password.\n\nIf you forget your master password, your encrypted vault cannot be recovered.",
                 editable=True,
                 editor="change_master_password",
+            ),
+            SettingItem(
+                key="manage_profiles",
+                label="Manage Profiles",
+                value=f"Active: {active_name}",
+                description=
+                    f"\n[#B0B4BF]Current: [white]{active_name}[/white]   "
+                ,
+                editable=True,
+                editor="manage_profiles",
             ),
             SettingItem(
                 key="export_vault",

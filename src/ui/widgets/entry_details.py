@@ -64,17 +64,17 @@ class DetailView(Static):
 
                     lines.append("[white]Export Encrypted Vault[/white]\n")
                     lines.append(
-                        "Create an encrypted backup of your vault.\n"
+                        "Create an encrypted backup of your vault.\n\nThe exported vault can only be opened using the same master password that currently protects it."
                     )
                     lines.append(
-                        "\nPress [b]E[/b] to choose a destination."
+                        "\n[gray]Press [b]E[/b] to choose a destination.[/]"
                     )
 
                 case "import":
 
                     lines.append("[white]Import Encrypted Vault[/white]\n")
                     lines.append(
-                        "Replace the current vault with an existing backup.\n"
+                        "Replace the current vault with an existing backup.\n\nYou must enter the original master password used to encrypt/decrypt the vault.\n\nIf you want to use a different master password, import the vault first and then use Change Master Password."
                     )
                     lines.append(
                         "\nPress [b]E[/b] to select a backup."
@@ -162,6 +162,10 @@ class EditForm(Vertical):
         elif type(self._item).__name__ == "SettingItem":
             from pathlib import Path
             match self._item.editor:
+                case "manage_profiles":
+                    from ui.widgets.manage_profiles_widget import ManageProfilesWidget
+                    yield ManageProfilesWidget(self.app.profile_manager)
+
                 case "number":
 
                     self._value_input = Input(
@@ -172,10 +176,13 @@ class EditForm(Vertical):
                     yield self._value_input
 
                 case "export":
+                    active_profile = getattr(self.app, "active_profile", None)
+                    suffix = f"-{active_profile.id}" if active_profile else ""
+                    default_path = str(Path.cwd() / f"backup/elk-backup{suffix}.vault")
 
                     self._destination_input = Input(
                         placeholder="Destination Folder",
-                        value=str(Path.cwd() / "backup/elk-backup.vault"),
+                        value=default_path,
                         id='destination'
                     )
 
@@ -184,7 +191,7 @@ class EditForm(Vertical):
                 case "import":
 
                     self._source_input = Input(
-                        placeholder="Backup File",
+                        placeholder="Backup File (e.g. backup/elk-backup-personal.vault)",
                     )
 
                     yield self._source_input
@@ -239,6 +246,9 @@ class EditForm(Vertical):
 
 
     def on_mount(self) -> None:
+        if type(self._item).__name__ == "SettingItem" and self._item.editor == "manage_profiles":
+            return
+            
         inputs = self.query(Input)
         if inputs:
             inputs.first().focus()
