@@ -13,22 +13,26 @@ from storage.provider import StorageProvider
 
 class GitHubStorage(StorageProvider):
 
-    FILE_NAME = "encrypted-vault.json"
+
 
     def __init__(
         self,
         username: str,
         repository: str,
         token: str,
+        profile_id: str,
     ):
         self.username = username
         self.repository = repository
         self.token = token
+        self.profile_id = profile_id
+
+        self.file_name = f"profiles/{profile_id}/vault.enc"
 
         self.url = (
             f"https://api.github.com/repos/"
             f"{username}/{repository}/contents/"
-            f"{self.FILE_NAME}"
+            f"{self.file_name}"
         )
 
         self.headers = {

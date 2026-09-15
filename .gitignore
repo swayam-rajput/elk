@@ -12,3 +12,4 @@ vault/*
 .env
 vault/encrypted-vault.json
 backup/
+data/

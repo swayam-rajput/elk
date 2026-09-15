@@ -1,3 +1,9 @@
+
+Note to myself
+
+Some code is not being read due to a bug or my undersight. Work on it
+
+---
 # Elk Password Manager
 
 Elk is a secure, keyboard-first, terminal-based password manager. It provides a dual-interface approach: a rich, keyboard-driven terminal user interface (TUI) for desktops, and a lightweight, zero-dependency console interface optimized for mobile devices (like Termux on Android).

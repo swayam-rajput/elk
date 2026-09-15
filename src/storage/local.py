@@ -16,7 +16,7 @@ class LocalStorage(StorageProvider):
     from the local filesystem.
     """
 
-    def __init__(self, vault_path: str = "vault/encrypted-vault.json"):
+    def __init__(self, vault_path: str):
         self.vault_path = Path(vault_path)
         self.vault_path.parent.mkdir(parents=True, exist_ok=True)
 
