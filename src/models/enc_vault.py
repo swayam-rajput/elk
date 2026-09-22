@@ -37,3 +37,5 @@ class EncryptedVault:
     encryption: EncryptionMetadata
 
     ciphertext: str
+
+    updated_at: str

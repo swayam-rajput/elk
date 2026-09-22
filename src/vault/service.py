@@ -1,11 +1,12 @@
 from dataclasses import asdict
 import json
+import hashlib
 from cryptography.exceptions import InvalidTag
 
 from models.entry import Entry
 from models.email import Email
 
-from datetime import datetime
+from datetime import datetime, UTC
 
 from models.vault import Vault
 from models.enc_vault import (
@@ -20,14 +21,26 @@ from crypto.aes import AESManager
 from crypto.encoding import Encoding
 
 from storage.local import LocalStorage
+from storage.provider import StorageProvider
 from vault.serializer import VaultSerializer
+from sync.sync_manager import SyncManager
 
 class VaultService:
 
-    def __init__(self):
+    def __init__(self, storage: StorageProvider, sync_manager: SyncManager | None = None):
+        self.storage = storage
+        self.sync_manager = sync_manager
         self._vault: Vault | None = None
         self._key: bytes | None = None
         self._salt: bytes | None = None
+        self._dirty: bool = False
+        self._local_hash: str | None = None
+        self._remote_hash: str | None = None
+        self._needs_sync: bool = False
+
+    @property
+    def dirty(self) -> bool:
+        return self._dirty
 
     @property
     def vault(self) -> Vault | None:
@@ -41,6 +54,62 @@ class VaultService:
         self._vault = None
         self._key = None
         self._salt = None
+
+    def _require_unlocked(self) -> Vault:
+        if self._vault is None:
+            raise ValueError("Vault is locked.")
+
+        return self._vault
+
+
+    def _require_key(self) -> bytes:
+        if self._key is None:
+            raise ValueError("Vault key not found.")
+
+        return self._key
+
+
+    def _require_salt(self) -> bytes:
+        if self._salt is None:
+            raise ValueError("Vault salt not found.")
+
+        return self._salt
+
+    def _calculate_hash(self, plaintext: bytes) -> str:
+        return hashlib.sha256(plaintext).hexdigest()
+
+    def _build_encrypted_vault(self, plaintext: bytes) -> EncryptedVault:
+        key = self._require_key()
+        salt = self._require_salt()
+
+        nonce = RandomGenerator.generate_nonce()
+        ciphertext = AESManager.encrypt(
+            plaintext,
+            key,
+            nonce,
+        )
+
+        deriver = Argon2KeyDeriver()
+
+        return EncryptedVault(
+            version=1,
+            kdf=KDFMetadata(
+                algorithm="argon2id",
+                memory=deriver.config.memory_cost,
+                iterations=deriver.config.time_cost,
+                parallelism=deriver.config.parallelism,
+                salt=Encoding.bytes_to_base64(salt),
+            ),
+            encryption=EncryptionMetadata(
+                algorithm="aes-256-gcm",
+                nonce=Encoding.bytes_to_base64(nonce),
+            ),
+            ciphertext=Encoding.bytes_to_base64(ciphertext),
+            updated_at=datetime.now(UTC).isoformat(),
+        )
+
+# ----------------------------------------------------------------------
+
     def create_vault(self, master_password: str):
 
         self._vault = Vault()
@@ -55,52 +124,61 @@ class VaultService:
 
         plaintext = VaultSerializer.serialize(self._vault)
 
-        nonce = RandomGenerator.generate_nonce()
+        encrypted_vault = self._build_encrypted_vault(plaintext)
 
-        ciphertext = AESManager.encrypt(
-            plaintext,
-            self._key,
-            nonce,
-        )
+        self.storage.save(encrypted_vault)
+        self._local_hash = self._calculate_hash(plaintext)
+        self._needs_sync = True
 
-        encrypted_vault = EncryptedVault(
-            version=1,
-            kdf=KDFMetadata(
-                algorithm="argon2id",
-                memory=deriver.config.memory_cost,
-                iterations=deriver.config.time_cost,
-                parallelism=deriver.config.parallelism,
-                salt=Encoding.bytes_to_base64(self._salt),
-            ),
-            encryption=EncryptionMetadata(
-                algorithm="aes-256-gcm",
-                nonce=Encoding.bytes_to_base64(nonce),
-            ),
-            ciphertext=Encoding.bytes_to_base64(ciphertext),
-        )
 
-        storage = LocalStorage()
+    def change_master_password(self, current_password: str, new_password: str, encrypted_token: str = "") -> str:
+        """
+        Changes the master password of the vault.
+        If encrypted_token is provided, decrypts it with the old key,
+        re-encrypts it with the new key, and returns the new encrypted token.
+        """
+        if self._vault is None or self._key is None or self._salt is None:
+            raise ValueError("Vault is locked.")
 
-        with open(storage.vault_path, "w", encoding="utf-8") as file:
-            json.dump(
-                asdict(encrypted_vault),
-                file,
-                indent=4,
-            )
+        # Verify current password
+        deriver = Argon2KeyDeriver()
+        verify_key = deriver.derive_key(current_password, self._salt)
+        if verify_key != self._key:
+            raise ValueError("Incorrect current master password.")
+
+        # Decrypt token with old key
+        decrypted_token = ""
+        if encrypted_token:
+            decrypted_token = self.decrypt_token(encrypted_token)
+
+        # Derive new key and salt
+        new_salt = RandomGenerator.generate_salt()
+        new_key = deriver.derive_key(new_password, new_salt)
+
+        # Update service keys
+        self._salt = new_salt
+        self._key = new_key
+        
+        # We need to force vault rewrite using the new key
+        plaintext = VaultSerializer.serialize(self._vault)
+
+        encrypted_vault = self._build_encrypted_vault(plaintext)
+        
+        self.storage.save(encrypted_vault)
+        self._local_hash = self._calculate_hash(plaintext)
+        self._needs_sync = True
+
+        # Re-encrypt token with new key
+        new_encrypted_token = ""
+        if decrypted_token:
+            new_encrypted_token = self.encrypt_token(decrypted_token)
+
+        return new_encrypted_token
+
 
     def unlock_vault(self, master_password: str):
 
-        storage = LocalStorage()
-
-        with open(storage.vault_path, "r", encoding="utf-8") as file:
-            data = json.load(file)
-
-        encrypted_vault = EncryptedVault(
-            version=data["version"],
-            kdf=KDFMetadata(**data["kdf"]),
-            encryption=EncryptionMetadata(**data["encryption"]),
-            ciphertext=data["ciphertext"],
-        )
+        encrypted_vault = self.storage.load()
 
         self._salt = Encoding.base64_to_bytes(
             encrypted_vault.kdf.salt
@@ -128,68 +206,100 @@ class VaultService:
 
         except InvalidTag:
             self.lock()
-            raise ValueError("Invalid master password.")
+            raise ValueError("Invalid master password.\nPress 'Enter' to exit")
 
+        self._local_hash = self._calculate_hash(plaintext)
+        self._remote_hash = self._local_hash
+        
         self._vault = VaultSerializer.deserialize(
             plaintext
         )
     
-    def save(self):
+    def save(self) -> bool:
+        if not self._dirty:
+            return False
 
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
 
-        if self._key is None:
-            raise ValueError("Vault key not found.")
+        self._require_key()
 
-        if self._salt is None:
-            raise ValueError("Vault salt not found.")
+        self._require_salt()
 
         plaintext = VaultSerializer.serialize(
             self._vault
         )
+        
+        current_hash = self._calculate_hash(plaintext)
+        if current_hash == self._local_hash:
+            self._dirty = False
+            return False
 
+        encrypted_vault = self._build_encrypted_vault(plaintext)
+        self.storage.save(encrypted_vault)
+        self._local_hash = current_hash
+        self._dirty = False
+        self._needs_sync = True
+        return True
+    
+    def sync(self) -> bool:
+        if not self._needs_sync:
+            return False
+        if self.sync_manager is None:
+            return False
+
+        success = self.sync_manager.sync()
+        if success:
+            self._remote_hash = self._local_hash
+            self._needs_sync = False
+        return success
+        
+    def encrypt_token(self, token: str) -> str:
+        if self._key is None:
+            raise ValueError("Vault is locked.")
         nonce = RandomGenerator.generate_nonce()
+        ciphertext = AESManager.encrypt(token.encode('utf-8'), self._key, nonce)
+        return Encoding.bytes_to_base64(nonce) + ":" + Encoding.bytes_to_base64(ciphertext)
 
-        ciphertext = AESManager.encrypt(
-            plaintext,
-            self._key,
-            nonce,
-        )
-
-        deriver = Argon2KeyDeriver()
-        encrypted_vault = EncryptedVault(
-            version=1,
-            kdf=KDFMetadata(
-                algorithm="argon2id",
-                memory=deriver.config.memory_cost,
-                iterations=deriver.config.time_cost,
-                parallelism=deriver.config.parallelism,
-                salt=Encoding.bytes_to_base64(self._salt),
-            ),
-            encryption=EncryptionMetadata(
-                algorithm="aes-256-gcm",
-                nonce=Encoding.bytes_to_base64(nonce),
-            ),
-            ciphertext=Encoding.bytes_to_base64(ciphertext),
-        )
-
-        storage = LocalStorage()
-
-        with open(storage.vault_path, "w", encoding="utf-8") as file:
-            json.dump(
-                asdict(encrypted_vault),
-                file,
-                indent=4,
-            )
+    def decrypt_token(self, encrypted_token: str) -> str:
+        if self._key is None:
+            raise ValueError("Vault is locked.")
+        if not encrypted_token:
+            return ""
+        parts = encrypted_token.split(":")
+        if len(parts) != 2:
+            raise ValueError("Invalid encrypted token format.")
+        nonce = Encoding.base64_to_bytes(parts[0])
+        ciphertext = Encoding.base64_to_bytes(parts[1])
+        try:
+            plaintext = AESManager.decrypt(ciphertext, self._key, nonce)
+            return plaintext.decode('utf-8')
+        except InvalidTag:
+            raise ValueError("Failed to decrypt token.")
+        
 
 
+    def get_entries(self, sort_mode: int = 0) -> list[Entry]:
+        """Return entries sorted by the given mode.
 
-    def get_entries(self) -> list[Entry]:
+        sort_mode:
+            0 - newest first (updated_at descending)
+            1 - alphabetical (A → Z)
+            2 - reverse alphabetical (Z → A)
+        """
         if self._vault is None:
             return []
 
-        return self._vault.entries
+        entries = list(self._vault.entries)  # shallow copy – don't mutate the vault list
+
+        if sort_mode == 0:
+            entries.sort(key=lambda e: e.updated_at, reverse=True)
+        elif sort_mode == 1:
+            entries.sort(key=lambda e: e.site.name.lower())
+        else:
+            entries.sort(key=lambda e: e.site.name.lower(), reverse=True)
+
+        return entries
+        # return sorted(self._vault.entries, key=lambda e: e.site.name.lower())
 
     def get_entry(self, entry_id: str) -> Entry | None:
         if self._vault is None:
@@ -219,58 +329,61 @@ class VaultService:
         return None
 
     def add_entry(self, entry: Entry):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
         for e in self.get_entries():
             if (
                 e.site.url == entry.site.url
                 and e.email_id == entry.email_id
             ):
-                print("Entry already exists.")
-                return
-        self._vault.entries.append(entry)
-        self.save()
+                raise ValueError("An entry for this site and email already exists.")
+        self.vault.entries.append(entry)
+        self._dirty = True
 
 
     def add_email(self, email: Email):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
 
         self._vault.emails.append(email)
-        self.save()
+        self._dirty = True
 
 
     def update_entry(self, entry: Entry):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
 
         for i, e in enumerate(self._vault.entries):
             if e.id == entry.id:
                 entry.updated_at = datetime.now()
                 self._vault.entries[i] = entry
-                self.save()
+                self._dirty = True
                 return
 
         raise ValueError(f"Entry {entry.id} not found.")
 
     def delete_entry(self, entry_id: str):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
 
         self._vault.entries = [
             entry
             for entry in self._vault.entries
             if entry.id != entry_id
         ]
-        self.save()
+        self._dirty = True
 
 
     def delete_email(self, email_id: str):
-        if self._vault is None:
-            raise ValueError("Vault is locked.")
+        self._require_unlocked()
+
+        email_to_delete = None
+        for email in self._vault.emails:
+            if email.id == email_id:
+                email_to_delete = email
+                break
+        
+        if not email_to_delete:
+            return
 
         for entry in self._vault.entries:
-            if entry.email_id == email_id:
+            if entry.email_id == email_to_delete.address:
                 raise ValueError(
                     "Email is used by one or more entries."
                 )
@@ -280,16 +393,82 @@ class VaultService:
             for email in self._vault.emails
             if email.id != email_id
         ]
-        self.save()
+        self._dirty = True
 
     def update_email(self, email: Email):
+        self._require_unlocked()
+
+        old_address = None
+        for i, e in enumerate(self._vault.emails):
+            if e.id == email.id:
+                old_address = e.address
+                self._vault.emails[i] = email
+                break
+                
+        if old_address is None:
+            raise ValueError(f"Email {email.id} not found.")
+
+        if old_address != email.address:
+            for entry in self._vault.entries:
+                if entry.email_id == old_address:
+                    entry.email_id = email.address
+
+        self._dirty = True
+
+    def export_backup(self, destination: str) -> str:
+        from pathlib import Path
+        from storage.backup import BackupManager
+        
+        if not isinstance(self.storage, LocalStorage):
+            raise ValueError("Export is only supported for local storage")
+
+        BackupManager.export_vault(Path(self.storage.vault_path), Path(destination))
+        return destination
+    
+    def import_vault(self, source: str):
+        from pathlib import Path
+        from storage.backup import BackupManager
+
+        if not isinstance(self.storage, LocalStorage):
+            raise ValueError(
+                "Import is only supported for local storage."
+            )
+
+        BackupManager.import_vault(
+            source=Path(source),
+            destination=self.storage.vault_path,
+        )
+
+        self.lock()
+
+    def search_entries(self, query: str) -> list[Entry]:
+        # use for phone execution as textual library handles search
         if self._vault is None:
             raise ValueError("Vault is locked.")
 
-        for i, e in enumerate(self._vault.emails):
-            if e.id == email.id:
-                self._vault.emails[i] = email
-                self.save()
-                return
+        query = query.strip().lower()
 
-        raise ValueError(f"Email {email.id} not found.")
+        if not query:
+            return self._vault.entries
+
+        email_lookup = {
+            email.id: email.address.lower()
+            for email in self._vault.emails
+        }
+
+        results: list[Entry] = []
+
+        for entry in self._vault.entries:
+            email = email_lookup.get(entry.email_id, "")
+
+            if (
+                query in entry.site.name.lower()
+                or query in entry.site.url.lower()
+                or query in email
+                or query in (entry.username or "").lower()
+                or query in entry.password.lower()
+                or query in entry.notes.lower()
+            ):
+                results.append(entry)
+
+        return results

@@ -20,7 +20,7 @@ class DetailView(Static):
     def render(self) -> str:
         lines = []
         if isinstance(self._item, Entry):
-            lines.append(f"[white]{self._item.site.name}[/white]")
+            lines.append(f"[white]{self._item.site.name}[/white]\n")
             
             lines.append(f"[gray]URL:[/gray] {self._item.site.url}")
                         
@@ -28,7 +28,7 @@ class DetailView(Static):
                 (
                     email.address
                     for email in self._emails
-                    if email.id == self._item.email_id
+                    if email.address == self._item.email_id
                 ),
                 "Unknown Email",
             )
@@ -50,10 +50,49 @@ class DetailView(Static):
             if self._item.label:
                 lines.append(f"[gray]Label:[/gray] {self._item.label}")
         elif type(self._item).__name__ == "SettingItem":
-            lines.append(f"[white]{self._item.label}[/white]")
-            lines.append(f"[gray]Value:[/gray] {self._item.value}")
-            lines.append(f"[gray]Description: {self._item.description}[/]")
-            
+
+            match self._item.editor:
+
+                case "number":
+
+                    lines.append(f"[white]{self._item.label}[/white]\n")
+                    lines.append(f"[gray]Current:[/] {self._item.value}\n")
+                    lines.append(self._item.description)
+                    lines.append("\n\nPress [b]E[/b] to edit.")
+
+                case "export":
+
+                    lines.append("[white]Export Encrypted Vault[/white]\n")
+                    lines.append(
+                        "Create an encrypted backup of your vault.\n\nThe exported vault can only be opened using the same master password that currently protects it."
+                    )
+                    lines.append(
+                        "\n[gray]Press [b]E[/b] to choose a destination.[/]"
+                    )
+
+                case "import":
+
+                    lines.append("[white]Import Encrypted Vault[/white]\n")
+                    lines.append(
+                        "Replace the current vault with an existing backup.\n\nYou must enter the original master password used to encrypt/decrypt the vault.\n\nIf you want to use a different master password, import the vault first and then use Change Master Password."
+                    )
+                    lines.append(
+                        "\nPress [b]E[/b] to select a backup."
+                    )
+
+                case "github_sync":
+
+                    lines.append(f"[white]{self._item.label}[/white]\n")
+                    lines.append(f"[gray]Current:[/] {self._item.value}\n")
+                    lines.append(self._item.description)
+                    lines.append("\n\nPress [b]E[/b] to configure.")
+
+                case "change_master_password":
+
+                    lines.append(f"[white]{self._item.label}[/white]\n")
+                    lines.append(self._item.description)
+                    lines.append("\n\nPress [b]E[/b] to change.")
+
         return "\n".join(lines)
 
 
@@ -71,23 +110,23 @@ class EditForm(Vertical):
                 value=self._item.site.name, placeholder="Site"
             )
             self._url_input = Input(
-                value=self._item.site.url, placeholder="URL"
+                value=self._item.site.url or 'https://', placeholder="URL"
             )
-            print("Entry email_id:", self._item.email_id)
-            print("Valid IDs:", [e.id for e in self._emails])
+            
             self._email_select = Select(
                 options=[
                     (
-                        f"{email.label} ({email.address})",
-                        email.id,
+                        f"{email.address}",
+                        email.address,
                     )
                     for email in self._emails
                 ],
+
                 
                 compact=True,
-                # value=self._item.email_id if self._item.email_id in [e.id for e in self._emails] else self._emails[0],
+                value=self._item.email_id or "Select email",
                 prompt="Email Account",
-                allow_blank=True
+                allow_blank=False
             )
 
             self._username_input = Input(
@@ -121,23 +160,105 @@ class EditForm(Vertical):
             ):
                 yield inp
         elif type(self._item).__name__ == "SettingItem":
-            self._value_input = Input(
-                value=str(self._item.value), placeholder="New Value"
-            )
-            yield self._value_input
+            from pathlib import Path
+            match self._item.editor:
+                case "manage_profiles":
+                    from ui.widgets.manage_profiles_widget import ManageProfilesWidget
+                    yield ManageProfilesWidget(self.app.profile_manager)
+
+                case "number":
+
+                    self._value_input = Input(
+                        value=str(self._item.value),
+                        placeholder="New Value",
+                    )
+
+                    yield self._value_input
+
+                case "export":
+                    active_profile = getattr(self.app, "active_profile", None)
+                    suffix = f"-[{active_profile.id}]" if active_profile else ""
+                    default_path = str(Path.cwd() / f"backup/elk-backup{suffix}.vault")
+
+                    self._destination_input = Input(
+                        placeholder="Destination Folder",
+                        value=default_path,
+                        id='destination'
+                    )
+
+                    yield self._destination_input
+
+                case "import":
+
+                    self._source_input = Input(
+                        placeholder="Backup File (e.g. backup/elk-backup-personal.vault)",
+                    )
+
+                    yield self._source_input
+
+                case "github_sync":
+
+                    settings = self.app.settings_manager.settings
+                    self._github_username_input = Input(
+                        value=settings.github_username or "",
+                        placeholder="GitHub Username",
+                    )
+                    self._github_repository_input = Input(
+                        value=settings.github_repository or "",
+                        placeholder="Repository",
+                    )
+
+                    existing_token = ""
+                    if settings.github_enabled and settings.github_token:
+                        try:
+                            existing_token = self.app.service.decrypt_token(settings.github_token)
+                        except Exception:
+                            pass
+
+                    self._github_token_input = Input(
+                        value=existing_token,
+                        placeholder="Personal Access Token",
+                        password=True,
+                    )
+
+                    yield self._github_username_input
+                    yield self._github_repository_input
+                    yield self._github_token_input
+
+                case "change_master_password":
+
+                    self._current_password_input = Input(
+                        placeholder="Current Master Password",
+                        password=True,
+                    )
+                    self._new_password_input = Input(
+                        placeholder="New Master Password",
+                        password=True,
+                    )
+                    self._confirm_password_input = Input(
+                        placeholder="Confirm New Master Password",
+                        password=True,
+                    )
+
+                    yield self._current_password_input
+                    yield self._new_password_input
+                    yield self._confirm_password_input
+
 
     def on_mount(self) -> None:
+        if type(self._item).__name__ == "SettingItem" and self._item.editor == "manage_profiles":
+            return
+            
         inputs = self.query(Input)
         if inputs:
             inputs.first().focus()
 
     def collect(self) -> dict:
-        # print(self._email_select.value)
         if isinstance(self._item, Entry):
             return {
                 "id": self._item.id,
                 "site_name": self._site_input.value,
-                "site_url": self._url_input.value,
+                "site_url": self._url_input.value or 'https://',
                 "email_id": self._email_select.value,
                 "username": self._username_input.value or None,
                 "password": self._password_input.value,
@@ -150,10 +271,49 @@ class EditForm(Vertical):
                 "label": self._label_input.value,
             }
         elif type(self._item).__name__ == "SettingItem":
-            return {
-                "key": self._item.key,
-                "value": self._value_input.value,
-            }
+            
+            match self._item.editor:
+
+                case "number":
+                    
+                    return {
+                        "key": self._item.key,
+                        "value": int(self._value_input.value),
+                    }
+
+                case "export":
+
+                    return {
+                        "action": "export",
+                        "destination": self._destination_input.value,
+                    }
+
+                case "import":
+
+                    return {
+                        "action": "import",
+                        "source": self._source_input.value,
+                    }
+
+                case "github_sync":
+
+                    return {
+                        "action": "github_sync",
+                        "username": self._github_username_input.value.strip(),
+                        "repository": self._github_repository_input.value.strip(),
+                        "token": self._github_token_input.value.strip(),
+                    }
+
+                case "change_master_password":
+
+                    return {
+                        "action": "change_master_password",
+                        "current_password": self._current_password_input.value,
+                        "new_password": self._new_password_input.value,
+                        "confirm_password": self._confirm_password_input.value,
+                    }
+
+        return {}
 
 
 class DetailPanel(Vertical):
@@ -161,7 +321,7 @@ class DetailPanel(Vertical):
         super().__init__(**kwargs)
         self._current_item = None
 
-    def show_item(self, item, emails) -> None:
+    def show_item(self, item, emails=None) -> None:
         self._current_item = item
         self.remove_children()
         self.mount(DetailView(item, emails))
@@ -169,7 +329,7 @@ class DetailPanel(Vertical):
     def show_entry(self, entry, emails) -> None:
         self.show_item(entry, emails)
 
-    def show_edit(self, item, emails) -> None:
+    def show_edit(self, item, emails=None) -> None:
         self._current_item = item
         self.remove_children()
         self.mount(EditForm(item, emails))

@@ -22,8 +22,7 @@ class CustomHeader(Horizontal):
         tabs = [
             ("1", "Passwords"),
             ("2", "Emails"),
-            ("3", "Search"),
-            ("4", "Settings"),
+            ("3", "Settings"),
         ]
         markup_parts = []
         for i, (num, name) in enumerate(tabs, start=1):

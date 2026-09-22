@@ -9,3 +9,7 @@ wheels/
 vault/*
 # Virtual environments
 .venv
+.env
+vault/encrypted-vault.json
+backup/
+data/

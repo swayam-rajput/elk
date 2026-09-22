@@ -10,7 +10,8 @@ Screen {
     background: transparent;
 }
 Select {
-    background: transparent;
+    background: #333333 50%;
+    
     border: none;
     height: 2;
     margin: 0 0 0 0;
@@ -22,19 +23,24 @@ Select:focus {
     border: none;
 }
 
-Select.-expandedq {
+
+
+Select.-expanded {
     background: transparent;
     border: none;
+    padding: 0 1;
 }
 SelectionList {
-    background: transparent;
-    padding: 2 1;
+    background: #aeffff 50%;
+    
+    padding: 0 1;
 
     border: none;
 }
 
 SelectionList > .selection-list--option {
-
+    background: #333333 50%;
+    
     border:none
 }
 
@@ -43,8 +49,26 @@ SelectionList > .selection-list--option:hover {
 }
 
 SelectionList > .selection-list--option.-selected {
-
+    background: #879792;
     color: #efefee;
+}
+Select {
+    background: #333333 50%;
+    color: $text;
+    border: none;
+}
+
+
+
+Select > SelectCurrent {
+    background: #333333 50%;
+    
+    color: $text;
+}
+
+Select > SelectCurrent:focus {
+background: #333333 50%;
+    color: $text;
 }
 
 /* ScrollableList on the left */
@@ -58,7 +82,7 @@ ScrollableList {
 
 /* DetailPanel on the right */
 DetailPanel {
-    width: 45%;
+    width: 80%;
     padding: 0 4;
     background: transparent;
 }
@@ -158,4 +182,45 @@ CustomHeader {
 
 #body {
     height: 1fr;
+}
+
+/* Inline search input */
+#search-input {
+    height: 2;
+    margin: 0 0;
+    padding: 0 1;
+    background: #333333 50%;
+    color: white;
+    border: none;
+    border-bottom: solid #444444;
+}
+
+#search-input:focus {
+    background: #444444 80%;
+    color: white;
+}
+
+/* Hidden utility */
+.-hidden {
+    display: none;
+}
+
+/* Style Toast notifications */
+Toast {
+    background: #333333;
+    color: white;
+    border: none;
+    padding: 0 1;
+}
+
+Toast.-information {
+    border-left: solid #879792;
+}
+
+Toast.-warning {
+    border-left: solid #ffaa00;
+}
+
+Toast.-error {
+    border-left: solid #b54044;
 }

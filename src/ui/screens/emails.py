@@ -21,11 +21,13 @@ class EmailsScreen(Screen):
         ("escape", "cancel_edit", "Cancel"),
     ]
 
-    def __init__(self, service: VaultService):
+    def __init__(self, service: VaultService, settings_manager=None):
         super().__init__()
         self.service = service
+        self.settings_manager = settings_manager
         self._selected_email: Email | None = None
         self._editing = False
+        self._adding = False
 
     def compose(self) -> ComposeResult:
         yield CustomHeader(active_tab=2, item_count=len(self.service.get_emails()), item_type="emails")
@@ -52,32 +54,49 @@ class EmailsScreen(Screen):
             label="",
         )
         self.service.add_email(new_email)
-        self.service.save()
         emails = self.service.get_emails()
         new_index = len(emails) - 1
         entry_list = self.query_one(ScrollableList)
         entry_list.load_items(emails, select_index=new_index)
         self._selected_email = new_email
         self._editing = True
+        self._adding = True
         detail = self.query_one(DetailPanel)
         detail.show_edit(new_email, emails)
 
     def action_delete_email(self) -> None:
         if self._selected_email is None or self._editing:
             return
-        email_id = self._selected_email.id
-        self.service.delete_email(email_id)
-        self.service.save()
-        self._selected_email = None
-        self._editing = False
-        self._refresh_emails()
-        detail = self.query_one(DetailPanel)
-        detail.remove_children()
+
+        from ui.screens.confirm_delete import ConfirmDeleteScreen
+
+        email = self._selected_email
+        message = f"Delete email [#D16666]{email.address}[/]? Press [orange][b]d[/][/] again to confirm or [orange][b]esc[/][/] to cancel"
+
+        def handle_confirm(confirmed: bool) -> None:
+            if confirmed:
+                try:
+                    self.service.delete_email(email.id)
+                    self._selected_email = None
+                    self._editing = False
+                    self._adding = False
+                    self._refresh_emails()
+                    detail = self.query_one(DetailPanel)
+                    detail.remove_children()
+                    self.notify("Email account deleted.")
+                except ValueError as e:
+                    self.notify(str(e), severity="error")
+
+        self.app.push_screen(
+            ConfirmDeleteScreen(message),
+            callback=handle_confirm
+        )
 
     def action_edit_email(self) -> None:
         if self._selected_email is None or self._editing:
             return
         self._editing = True
+        self._adding = False
         detail = self.query_one(DetailPanel)
         detail.show_edit(self._selected_email, self.service.get_emails())
 
@@ -98,8 +117,8 @@ class EmailsScreen(Screen):
             label=data["label"],
         )
         self.service.update_email(updated)
-        self.service.save()
         self._editing = False
+        self._adding = False
         self._selected_email = updated
         detail.show_item(updated, self.service.get_emails())
         self._refresh_emails()
@@ -108,10 +127,13 @@ class EmailsScreen(Screen):
     def action_cancel_edit(self) -> None:
         if not self._editing:
             return
+        # If we were adding a new email, delete the empty record
+        if self._adding and self._selected_email:
+            self.service.delete_email(self._selected_email.id)
+            self._selected_email = None
         self._editing = False
-        if self._selected_email:
-            detail = self.query_one(DetailPanel)
-            detail.show_item(self._selected_email, self.service.get_emails())
+        self._adding = False
+        self._refresh_emails()
         self.query_one(ScrollableList).focus()
 
     def _refresh_emails(self) -> None:
@@ -124,7 +146,7 @@ class EmailsScreen(Screen):
             pass
         if emails:
             self._selected_email = emails[0]
-            self.query_one(DetailPanel).show_item(self._selected_email,emails)
+            self.query_one(DetailPanel).show_item(self._selected_email, emails)
         else:
             self._selected_email = None
             self.query_one(DetailPanel).remove_children()
