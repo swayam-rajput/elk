@@ -16,9 +16,6 @@ With local-first storage, Argon2id key derivation, and AES-256-GCM encryption, E
 
 Elk's design separates the interactive presentation layers from the core cryptographic and storage services. Here is an overview of the system architecture:
 
-### Component Diagram (Hand-Drawn Style)
-![Elk Architecture Diagram](./elk_architecture.png)
-
 ### System Workflow
 
 ```mermaid
