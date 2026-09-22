@@ -6,4 +6,5 @@ class Profile:
     id: str
     name: str
     vault_path: str
-    is_default: bool = False
+    settings_path: str
+    is_default: bool = False

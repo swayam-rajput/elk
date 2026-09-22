@@ -33,15 +33,23 @@ class ProfileManager:
         self.active_profile_id = data.get("active_profile")
         self.default_profile_id = data.get("default_profile")
 
-        self.profiles = [
-            Profile(
-                id=p["id"],
-                name=p["name"],
-                vault_path=p["vault_path"],
-                is_default=p.get("is_default", False),
+        self.profiles = []
+        for p in data.get("profiles", []):
+            profile_dir = self.profiles_dir / p["id"]
+            # Backfill settings_path for profiles.json written before this field existed
+            settings_path = p.get(
+                "settings_path",
+                str(profile_dir / "settings.json"),
             )
-            for p in data.get("profiles", [])
-        ]
+            self.profiles.append(
+                Profile(
+                    id=p["id"],
+                    name=p["name"],
+                    vault_path=p["vault_path"],
+                    settings_path=settings_path,
+                    is_default=p.get("is_default", False),
+                )
+            )
 
         # First time reading an older profiles.json that has no default set:
         # auto-assign and resave so it's persisted going forward.
@@ -59,6 +67,7 @@ class ProfileManager:
         profile_dir.mkdir(parents=True, exist_ok=True)
 
         vault_path = profile_dir / "vault.enc"
+        settings_path = profile_dir / "settings.json"
 
         # Req 5: migrate legacy vault unchanged
         if _LEGACY_VAULT.exists() and not vault_path.exists():
@@ -68,6 +77,7 @@ class ProfileManager:
             id="personal",
             name="Personal",
             vault_path=str(vault_path),
+            settings_path=str(settings_path),
             is_default=True,
         )
 
@@ -88,6 +98,7 @@ class ProfileManager:
                     "id": p.id,
                     "name": p.name,
                     "vault_path": p.vault_path,
+                    "settings_path": p.settings_path,
                     "is_default": p.is_default,
                 }
                 for p in self.profiles
@@ -154,6 +165,7 @@ class ProfileManager:
             id=profile_id,
             name=name,
             vault_path=str(profile_dir / "vault.enc"),
+            settings_path=str(profile_dir / "settings.json"),
             is_default=False,
         )
 

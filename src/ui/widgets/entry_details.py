@@ -177,7 +177,7 @@ class EditForm(Vertical):
 
                 case "export":
                     active_profile = getattr(self.app, "active_profile", None)
-                    suffix = f"-{active_profile.id}" if active_profile else ""
+                    suffix = f"-[{active_profile.id}]" if active_profile else ""
                     default_path = str(Path.cwd() / f"backup/elk-backup{suffix}.vault")
 
                     self._destination_input = Input(
