@@ -105,16 +105,40 @@ class ManageProfilesWidget(Vertical):
         inp.focus()
 
     def action_delete_profile(self) -> None:
-        if self._form_mode: return
+        if self._form_mode:
+            return
+
         profile = self._get_selected()
-        if not profile: return
-        try:
-            self.profile_manager.delete_profile(profile.id)
-            self.notify(f"Profile '{profile.name}' deleted.")
-            self._refresh_list()
-            self._notify_settings_refresh()
-        except ValueError as e:
-            self.notify(str(e), severity="error")
+        if not profile:
+            return
+
+        from ui.screens.confirm_delete import ConfirmDeleteScreen
+
+        message = (
+            f"Delete profile [#D16666]{profile.name}[/]? "
+            f"Press [orange][b]d[/][/] again to confirm or "
+            f"[orange][b]esc[/][/] to cancel"
+        )
+
+        def handle_confirm(confirmed: bool) -> None:
+            if not confirmed:
+                return
+
+            try:
+                self.profile_manager.delete_profile(profile.id)
+
+                self.notify(f"Profile '{profile.name}' deleted.")
+                self._refresh_list()
+                self._notify_settings_refresh()
+
+            except ValueError as e:
+                self.notify(str(e), severity="error")
+
+        self.app.push_screen(
+            ConfirmDeleteScreen(message),
+            callback=handle_confirm,
+        )
+
 
     def action_set_default(self) -> None:
         if self._form_mode: return
