@@ -1,10 +1,7 @@
-
-Note to myself
-
-Some code is not being read due to a bug or my undersight. Work on it
-
----
 # Elk Password Manager
+
+![](elk.png)
+
 
 Elk is a secure, keyboard-first, terminal-based password manager. It provides a dual-interface approach: a rich, keyboard-driven terminal user interface (TUI) for desktops, and a lightweight, zero-dependency console interface optimized for mobile devices (like Termux on Android).
 
@@ -12,100 +9,30 @@ With local-first storage, Argon2id key derivation, and AES-256-GCM encryption, E
 
 ---
 
-## Architecture
+## Overview
 
-Elk's design separates the interactive presentation layers from the core cryptographic and storage services. Here is an overview of the system architecture:
+**Dual Interfaces:**
+- **Desktop TUI**: Full-screen, responsive, keyboard-first UI with split-pane navigation built on [Textual](https://github.com/Textualize/textual).
+- **Phone CLI**: Lightweight console interface designed for mobile devices and Termux.
 
-### System Workflow
+**Architecture:**
+Elk's design separates the interactive presentation layers from the core cryptographic and storage services. The system workflow shows Desktop and Phone interfaces both connecting through a Profile layer to the VaultService and SyncManager, with cryptographic encryption via Argon2id KDF and AES-256-GCM, and storage via local files or GitHub remote.
 
-```mermaid
-graph TD
-    subgraph UI ["User Interfaces"]
-        Desktop["Desktop TUI (Textual)"]
-        Phone["Phone CLI (Termux)"]
-    end
-
-    subgraph Profiles ["Profile Layer"]
-        PM["ProfileManager"]
-        Profile["Selected Profile"]
-    end
-
-    subgraph Service ["Core Layer"]
-        VS["VaultService"]
-        SM["SyncManager"]
-    end
-
-    subgraph Crypto ["Cryptographic Engine"]
-        Argon["Argon2id (KDF)"]
-        AES["AES-256-GCM (Encryption)"]
-    end
-
-    subgraph Storage ["Storage Providers"]
-        Local["Local Profile Storage"]
-        GitHub["GitHub Remote Storage"]
-    end
-
-    Desktop --> PM
-    Phone --> PM
-    PM --> Profile
-    Profile --> VS
-    Profile --> Local
-
-    VS --> Crypto
-    VS --> SM
-    SM --> Local
-    SM --> GitHub
-```
-
----
-
-## Features
-
-* **Dual Interfaces**
-
-  * **Desktop TUI**: Full-screen, responsive, keyboard-first UI with split-pane navigation built on [Textual](https://github.com/Textualize/textual).
-  * **Phone CLI**: Lightweight console interface designed for mobile devices and Termux.
-
-* **Multiple Profiles**
-
-  * Create, rename, delete, and switch between profiles.
-  * Set a default profile for automatic selection at startup.
-  * Each profile has its own encrypted vault and master password.
-
-* **Profile Isolation**
-
-  * Each profile has its own vault and settings.
-  * Switching profiles creates a new vault and settings context.
-  * Master passwords and encryption keys are never stored in profile metadata.
-
-* **Security**
-
-  * **Key Derivation**: Argon2id KDF.
-  * **Encryption**: AES-256-GCM authenticated encryption.
-  * **Clipboard Timeout**: Automatic clipboard clearing after a configurable interval.
-
-* **GitHub-Backed Sync**
-
-  * Synchronize encrypted vaults with a private GitHub repository.
-  * Profile-specific remote vault paths.
-  * Dirty-state tracking to minimize unnecessary API requests.
-  * Supports fine-grained GitHub Personal Access Tokens.
-
-* **Vault Backup**
-
-  * Import and export encrypted vault files locally.
-  * Exported vaults retain their existing encryption and master password.
+**Features:**
+- Dual interfaces (desktop TUI and phone CLI)
+- Multiple profiles with independent vaults and master passwords
+- Profile isolation (each profile has its own vault and settings)
+- Security: Argon2id KDF, AES-256-GCM authenticated encryption, configurable clipboard timeout
+- GitHub-backed sync with profile-specific remote vault paths
+- Vault import/export (encrypted vaults retain existing encryption)
 
 ---
 
 ## Getting Started
 
-### Prerequisites
+**Prerequisites:** Ensure you have Python 3.11 or newer installed.
 
-Ensure you have Python 3.11 or newer installed.
-
-### Installation
-
+**Installation:**
 Clone the repository and install the dependencies:
 
 ```bash
@@ -120,40 +47,50 @@ uv sync
 pip install -r requirements.txt
 ```
 
-### Running the Desktop TUI
-
+**Running the Desktop TUI:**
 To launch the desktop interface:
-
 ```bash
 python src/main.py
 ```
-
 On the first launch, Elk creates a default `Personal` profile and asks you to create its master password.
 
-* **Navigation keys**:
+**Navigation keys (Desktop):**
+- `1-3`: View Passwords, Emails, or Settings screens
+- `f` / `Ctrl+F`: Toggle search bar
+- `a`: Add new item
+- `e`: Edit selected item
+- `d`: Delete selected item
+- `y`: Copy selected password to clipboard
+- `p`: Reveal / hide password
+- `Ctrl+S`: Save item
+- `Esc`: Cancel editing or close search
+- `q`: Quit application
 
-  * `1`: View Passwords screen
-  * `2`: View Emails screen
-  * `3`: View Settings screen
-  * `f` / `Ctrl+F`: Toggle search bar
-  * `a`: Add new item
-  * `e`: Edit selected item
-  * `d`: Delete selected item
-  * `y`: Copy selected password to clipboard
-  * `p`: Reveal / hide password
-  * `Ctrl+S`: Save item
-  * `Esc`: Cancel editing or close search
-  * `q`: Quit application
-
-### Running the Phone Companion
-
-To launch the lightweight phone app:
-
+**Running the Phone Companion:**
+To launch the lightweight phone app on a mobile device (Termux on Android):
 ```bash
 python src/phone/main.py
 ```
-
 The phone interface provides a lightweight CLI for working with the same encrypted vault format.
+
+**Termux setup:**
+- Install Termux from F-Droid or Google Play Store
+- Termux includes Python and pip by default
+- Run `pip install argon2-cffi cryptography pydantic python-dotenv requests textual` to install dependencies
+- The `termux-clipboard-set` command is available by default for password copy functionality
+
+**Keyboard shortcuts (Phone):**
+- `S` - Search entries
+- `A` - Add new entry
+- `Y` - Sync with GitHub
+- `L` - Lock vault and exit to main menu
+- `X` - Exit application
+- Number keys (1-N) - Select entry by number
+- `P` - Show password (in entry view)
+- `C` - Copy password to clipboard
+- `E` - Edit entry
+- `D` - Delete entry
+- `B` - Back to search results
 
 ---
 
@@ -161,7 +98,7 @@ The phone interface provides a lightweight CLI for working with the same encrypt
 
 Each profile has its own encrypted vault and settings:
 
-```text
+```
 data/
 ├── profiles.json
 └── profiles/
@@ -174,9 +111,7 @@ data/
         └── settings.json
 ```
 
-Each profile has an independent master password and encryption key.
-
-`profiles.json` stores profile metadata and the default/active profile. It does not store master passwords or encryption keys.
+Each profile has an independent master password and encryption key. `profiles.json` stores profile metadata and the default/active profile. It does not store master passwords or encryption keys.
 
 ---
 
@@ -184,16 +119,13 @@ Each profile has an independent master password and encryption key.
 
 Each profile stores its configuration separately:
 
-```text
+```
 data/profiles/<profile-id>/settings.json
 ```
 
 This allows profiles to have independent GitHub repositories and synchronization settings.
 
-### Setting Up GitHub Cloud Sync
-
-To sync your vault across machines:
-
+**Setting Up GitHub Cloud Sync:**
 1. Create a **private** GitHub repository dedicated to Elk vault synchronization.
 2. Generate a **Fine-grained Personal Access Token (PAT)**.
 3. Grant `Contents` **Read and write** access to the repository.
@@ -202,8 +134,7 @@ To sync your vault across machines:
 6. Enable synchronization.
 
 The remote repository uses profile-specific paths:
-
-```text
+```
 elk-vault/
 └── data/
     └── profiles/
@@ -212,20 +143,16 @@ elk-vault/
         └── work/
             └── vault.enc
 ```
-
 Only encrypted vault files are synchronized.
 
 ---
 
 ## Import & Export
 
-Import and export operate on encrypted vault files.
+Import and export operate on encrypted vault files. Exporting a vault does not decrypt or change it. An imported vault retains its existing encryption and therefore requires its original master password.
 
-Exporting a vault does not decrypt or change it. An imported vault retains its existing encryption and therefore requires its original master password.
-
-For example:
-
-```text
+Example:
+```
 Encrypted vault
     ↓
 Export
